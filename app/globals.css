@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+/* Paleta fechada: só os tokens do design system geram utilitários de cor. */
+@theme {
+  --color-*: initial;
+  --color-white: #fff;
+  --color-black: #000;
+  --color-bg: #05070a;
+  --color-fg: #e9efea;
+  --color-lime: oklch(0.9 0.2 128);
+  --color-on-lime: #071003;
+  --color-cyan: oklch(0.86 0.14 215);
+  --color-amber: oklch(0.86 0.15 70);
+  --color-danger: oklch(0.72 0.17 25);
+  --color-line: rgb(255 255 255 / 0.08);
+
+  --text-label: 10.5px;
+  --text-label--line-height: 1;
+  --text-title: 30px;
+  --text-title--line-height: 1;
+  --text-title--letter-spacing: -0.01em;
+
+  --tracking-label: 0.14em;
+  --tracking-button: 0.16em;
+
+  --radius-field: 16px;
+  --radius-button: 18px;
+  --radius-card: 22px;
+  --radius-hero: 24px;
+
+  --shadow-card: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  --shadow-card-accent:
+    inset 0 1px 0 rgb(255 255 255 / 0.06), 0 20px 50px -20px oklch(0.9 0.2 128 / 0.25);
+  --shadow-button:
+    inset 0 1px 0 rgb(255 255 255 / 0.5), 0 12px 30px -8px oklch(0.9 0.2 128 / 0.6),
+    0 0 40px -8px oklch(0.9 0.2 128 / 0.7);
+  --shadow-button-pressed:
+    inset 0 1px 0 rgb(255 255 255 / 0.5), 0 0 70px 4px oklch(0.9 0.2 128 / 0.85);
+  --shadow-field-focus: 0 0 0 3px oklch(0.9 0.2 128 / 0.12), 0 0 18px oklch(0.9 0.2 128 / 0.15);
+  --shadow-tab-bar: 0 14px 34px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.05);
+  --shadow-indicator: 0 0 12px 2px oklch(0.9 0.2 128 / 0.8);
+  --shadow-glow-sm: 0 0 16px oklch(0.9 0.2 128 / 0.15);
+  --shadow-glow: 0 0 18px oklch(0.9 0.2 128 / 0.25);
+  --shadow-glow-lg: 0 0 24px oklch(0.9 0.2 128 / 0.5);
+
+  --drop-shadow-glow: 0 0 6px oklch(0.9 0.2 128 / 0.7);
+
+  --ease-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --animate-screen-in: screen-in 0.5s var(--ease-snap) both;
+
+  @keyframes screen-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* Fontes carregadas via next/font em app/layout.tsx */
+@theme inline {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-chakra-petch), var(--font-geist), ui-sans-serif, sans-serif;
+}
+
+@utility bg-card {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.018));
+}
+
+@utility bg-card-accent {
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--color-lime) 9%, transparent),
+    rgb(255 255 255 / 0.02) 55%
+  );
+}
+
+/* Brilho neon na cor do próprio texto (números de destaque) */
+@utility text-glow {
+  text-shadow: 0 0 18px color-mix(in oklab, currentColor 50%, transparent);
+}
+
+@layer base {
+  /* O fundo fica no html para o grid (z-index -1) aparecer por cima dele. */
+  html {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    color-scheme: dark;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  body {
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+  }
+
+  /* Grid técnico que some em direção à base da tela */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.028) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: linear-gradient(180deg, #000, rgb(0 0 0 / 0.3) 50%, transparent 85%);
+  }
+
+  /* Brilho lime no topo */
+  body::after {
+    content: "";
+    position: fixed;
+    top: -220px;
+    left: -30%;
+    right: -30%;
+    height: 440px;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--color-lime) 9%, transparent),
+      transparent
+    );
+  }
+
+  button,
+  a {
+    touch-action: manipulation;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-lime) 35%, transparent);
+  }
+}
