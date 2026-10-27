@@ -10,6 +10,16 @@ export function formatNumber(value: number, maxDecimals = 0): string {
   return format.format(value);
 }
 
+/** "1 série", "20 séries". */
+export function plural(count: number, singular: string, pluralForm: string): string {
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}
+
+/** Texto para busca: sem acentos, minúsculo ("Tríceps" → "triceps"). */
+export function normalizeForSearch(text: string): string {
+  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+}
+
 /** Iniciais para avatar: "Lucas Martins" → "LM". */
 export function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);

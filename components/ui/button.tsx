@@ -5,6 +5,7 @@ const variants = {
   primary: "bg-lime font-bold text-on-lime shadow-button active:shadow-button-pressed",
   secondary: "border border-white/10 bg-white/6 font-semibold text-fg active:bg-white/10",
   ghost: "font-semibold text-lime active:bg-lime/8",
+  danger: "border border-danger/35 bg-danger/10 font-semibold text-danger active:bg-danger/20",
 };
 
 // Todos os tamanhos respeitam o alvo de toque mínimo de 48px

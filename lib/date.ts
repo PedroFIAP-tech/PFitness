@@ -13,6 +13,20 @@ export function todayInAppTimeZone(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: APP_TIME_ZONE }).format(now);
 }
 
+/** Dias de calendário (em America/Sao_Paulo) entre `date` e `now`. */
+export function calendarDaysAgo(date: Date, now: Date = new Date()): number {
+  const dayStart = (d: Date) => Date.parse(`${todayInAppTimeZone(d)}T00:00:00Z`);
+  return Math.round((dayStart(now) - dayStart(date)) / 86_400_000);
+}
+
+/** "hoje", "ontem", "há 7 dias". */
+export function formatDaysAgo(date: Date, now: Date = new Date()): string {
+  const days = calendarDaysAgo(date, now);
+  if (days <= 0) return "hoje";
+  if (days === 1) return "ontem";
+  return `há ${days} dias`;
+}
+
 const dayLabelFormat = new Intl.DateTimeFormat("pt-BR", {
   timeZone: APP_TIME_ZONE,
   weekday: "short",

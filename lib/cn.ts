@@ -24,8 +24,8 @@ const twMerge = extendTailwindMerge({
       ],
       "drop-shadow": ["glow"],
       font: ["display"],
-      ease: ["snap"],
-      animate: ["screen-in"],
+      ease: ["snap", "sheet"],
+      animate: ["screen-in", "item-in", "slide-up", "sheet-up", "fade-in", "pop", "toast-in"],
     },
   },
 });

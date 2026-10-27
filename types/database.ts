@@ -569,6 +569,10 @@ export type Database = {
     }
     Functions: {
       current_streak: { Args: { p_user: string }; Returns: number }
+      save_workout_plan: {
+        Args: { p_exercises: Json; p_plan_id?: number; p_title: string }
+        Returns: number
+      }
     }
     Enums: {
       goal_type: "ganhar_massa" | "perder_gordura" | "manter"

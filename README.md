@@ -34,6 +34,14 @@ Em **Authentication → URL Configuration**:
 - **Site URL**: a URL principal do app (em produção, o domínio da Vercel).
 - **Redirect URLs**: `http://localhost:3000/auth/callback` e `https://<seu-app>.vercel.app/auth/callback`. O link de confirmação de email volta para essa rota.
 
+### Migrations
+
+O schema base está em [`docs/pfitness_schema.sql`](docs/pfitness_schema.sql). As mudanças posteriores ficam em [`supabase/migrations/`](supabase/migrations/). Rode cada arquivo novo, em ordem, no **SQL Editor** do Supabase:
+
+| Arquivo | O que faz |
+| --- | --- |
+| `20261027120000_save_workout_plan.sql` | Função que salva a ficha e os exercícios dela numa única transação (usada em Salvar ficha) |
+
 ## Scripts
 
 | Comando | O que faz |
@@ -65,19 +73,23 @@ SUPABASE_PROJECT_REF=<ref> npm run db:types
 ```
 app/
   (auth)/login/          login e cadastro (server actions em (auth)/actions.ts)
-  (app)/                 abas: hoje, treinos, dieta, progresso, perfil
+  (tabs)/                abas com tab bar: hoje, treinos, dieta, progresso, perfil
+  (focus)/               telas cheias sem tab bar: nova/editar ficha, treino em andamento
   auth/callback/         destino do link de confirmação de email
   ~offline/              fallback do service worker sem rede
   sw.ts  manifest.ts  icon.svg  apple-icon.png
 components/
-  ui/                    Card, Button, Label, StatNumber, Input, Segmented
-  app-shell/             AppShell, TabBar, Screen/ScreenHeader
+  ui/                    Card, Button, IconButton, Label, StatNumber, Input, Segmented,
+                         Stepper, Chip, Sheet (bottom sheet), Toast, ícones
+  app-shell/             AppShell, TabBar, Screen/ScreenHeader, FocusHeader
 lib/
   supabase/              clientes browser/server e renovação de sessão do proxy
   auth.ts                usuário e perfil da sessão (getSessionUser, getCurrentProfile)
   profile.ts             ensureProfile: cria perfil e metas no primeiro login
+  workouts.ts            fichas, biblioteca de exercícios, badge HOJE, última vez/carga
   date.ts                datas em America/Sao_Paulo
 types/database.ts        tipos do schema
+supabase/migrations/     SQL aplicado depois do schema base
 proxy.ts                 protege as rotas e renova a sessão (o antigo middleware.ts)
 scripts/                 build do service worker e geração de ícones
 ```
