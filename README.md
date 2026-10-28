@@ -41,6 +41,7 @@ O schema base está em [`docs/pfitness_schema.sql`](docs/pfitness_schema.sql). A
 | Arquivo | O que faz |
 | --- | --- |
 | `20261027120000_save_workout_plan.sql` | Função que salva a ficha e os exercícios dela numa única transação (usada em Salvar ficha) |
+| `20261027130000_workout_session.sql` | Treino em andamento: uma sessão ativa por usuário, `start_workout`, `log_set`/`undo_set` (série + PR + pontos juntos), `finish_workout`, `discard_workout` e `exercise_bests_before` |
 
 ## Scripts
 
@@ -74,19 +75,25 @@ SUPABASE_PROJECT_REF=<ref> npm run db:types
 app/
   (auth)/login/          login e cadastro (server actions em (auth)/actions.ts)
   (tabs)/                abas com tab bar: hoje, treinos, dieta, progresso, perfil
-  (focus)/               telas cheias sem tab bar: nova/editar ficha, treino em andamento
+  (focus)/               telas cheias sem tab bar: nova/editar ficha, treino em andamento,
+                         resumo do treino
   auth/callback/         destino do link de confirmação de email
   ~offline/              fallback do service worker sem rede
   sw.ts  manifest.ts  icon.svg  apple-icon.png
 components/
   ui/                    Card, Button, IconButton, Label, StatNumber, Input, Segmented,
-                         Stepper, Chip, Sheet (bottom sheet), Toast, ícones
+                         Stepper, Chip, Sheet (bottom sheet), Toast, WheelPicker (roleta),
+                         HoldButton, ícones
   app-shell/             AppShell, TabBar, Screen/ScreenHeader, FocusHeader
+  workout/               Iniciar/Continuar (com conflito), pílula do treino, fila de séries
 lib/
   supabase/              clientes browser/server e renovação de sessão do proxy
   auth.ts                usuário e perfil da sessão (getSessionUser, getCurrentProfile)
   profile.ts             ensureProfile: cria perfil e metas no primeiro login
   workouts.ts            fichas, biblioteca de exercícios, badge HOJE, última vez/carga
+  workout-session.ts     treino em andamento e resumo (servidor)
+  workout-model.ts       regras do treino: estado, PR, totais (servidor e cliente)
+  workout-sync.ts        fila offline das séries (cliente)
   date.ts                datas em America/Sao_Paulo
 types/database.ts        tipos do schema
 supabase/migrations/     SQL aplicado depois do schema base
@@ -100,3 +107,8 @@ scripts/                 build do service worker e geração de ícones
 - **Sessão e Cache Components:** ler a sessão usa `cookies()`, então todo componente que chama `getSessionUser()`/`getCurrentProfile()` precisa ficar dentro de um `<Suspense>` (fora dele o build falha). O resto da página é pré-renderizado e aparece na hora.
 - **Design tokens:** cores, raios, sombras e tipografia ficam em `@theme` no `app/globals.css`. Use os utilitários (`bg-lime`, `text-fg/52`, `rounded-card`, `shadow-button`, `font-display`…) em vez de valores soltos. Ao criar um token novo, registre-o também em `lib/cn.ts`.
 - **Service worker:** é gerado depois do `next build` porque a rota oficial do `@serwist/turbopack` não é compatível com Cache Components. Detalhes em `scripts/build-sw.mjs`.
+- **Treino em andamento:** o banco é a fonte da verdade das séries concluídas/puladas. Elas passam por uma fila no `localStorage` (`lib/workout-sync.ts`) que reenvia quando a conexão volta; as funções do banco são idempotentes, então reenviar não duplica. Os kg/reps ajustados, o exercício atual e o descanso (guardado como horário de término) também ficam no aparelho, para retomar o treino depois de fechar o app.
+
+## Pendências
+
+- **Travar `point_events` antes da parte de competição.** Hoje o RLS (`own_rows`) deixa o próprio usuário inserir pontos direto pela API. Antes de rankings/competição, revogar `insert`/`update`/`delete` dessa tabela para `authenticated` e gravar pontos só pelas funções (`log_set`, `finish_workout`…), que então passam a ser `security definer` com checagem explícita de `auth.uid()`.

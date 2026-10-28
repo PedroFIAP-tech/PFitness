@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PlusIcon } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/toast";
+import type { ActiveSession } from "@/lib/workout-session";
 import type { PlanOverview } from "@/lib/workouts";
 import { PlanCard } from "./plan-card";
 
 type PlanListProps = {
   plans: PlanOverview[];
   nextPlanId: number | null;
+  activeSession: ActiveSession | null;
   /** Ficha recém-salva (?ficha=): abre o card e avisa. */
   savedPlanId: number | null;
   /** Código da ficha recém-excluída (?excluida=). */
@@ -17,7 +19,7 @@ type PlanListProps = {
 };
 
 /** A página remonta esta lista (via `key`) quando chega de um salvar/excluir. */
-export function PlanList({ plans, nextPlanId, savedPlanId, deletedCode }: PlanListProps) {
+export function PlanList({ plans, nextPlanId, activeSession, savedPlanId, deletedCode }: PlanListProps) {
   const [openIds, setOpenIds] = useState(
     () => new Set([savedPlanId ?? nextPlanId].filter((id): id is number => id !== null)),
   );
@@ -44,6 +46,7 @@ export function PlanList({ plans, nextPlanId, savedPlanId, deletedCode }: PlanLi
           key={plan.id}
           plan={plan}
           isNext={plan.id === nextPlanId}
+          activeSession={activeSession}
           open={openIds.has(plan.id)}
           onToggle={() => toggle(plan.id)}
         />

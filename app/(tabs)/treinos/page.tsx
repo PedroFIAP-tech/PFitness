@@ -8,6 +8,7 @@ import { iconButtonStyles } from "@/components/ui/icon-button";
 import { PlusIcon } from "@/components/ui/icons";
 import { Label } from "@/components/ui/label";
 import { plural } from "@/lib/format";
+import { getActiveSession } from "@/lib/workout-session";
 import { getPlansOverview } from "@/lib/workouts";
 import { PlanList } from "./plan-list";
 
@@ -24,7 +25,11 @@ export default function TreinosPage({ searchParams }: PageProps<"/treinos">) {
 }
 
 async function TreinosContent({ searchParams }: Pick<PageProps<"/treinos">, "searchParams">) {
-  const [{ plans, nextPlanId }, params] = await Promise.all([getPlansOverview(), searchParams]);
+  const [{ plans, nextPlanId }, activeSession, params] = await Promise.all([
+    getPlansOverview(),
+    getActiveSession(),
+    searchParams,
+  ]);
   const savedPlanId = Number(params.ficha) || null;
   const deletedCode = typeof params.excluida === "string" ? params.excluida : null;
 
@@ -42,6 +47,7 @@ async function TreinosContent({ searchParams }: Pick<PageProps<"/treinos">, "sea
           key={savedPlanId ?? deletedCode ?? "fichas"}
           plans={plans}
           nextPlanId={nextPlanId}
+          activeSession={activeSession}
           savedPlanId={savedPlanId}
           deletedCode={deletedCode}
         />

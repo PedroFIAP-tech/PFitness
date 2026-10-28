@@ -2,6 +2,7 @@ import { SerwistProvider } from "@serwist/turbopack/react";
 import type { Metadata, Viewport } from "next";
 import { Chakra_Petch, Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
+import { SetSyncRunner } from "@/components/workout/set-sync-runner";
 import "./globals.css";
 
 const chakraPetch = Chakra_Petch({
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         {/* public/sw.js é gerado no build (scripts/build-sw.mjs); em dev fica desligado */}
         <SerwistProvider swUrl="/sw.js" disable={process.env.NODE_ENV === "development"}>
           {children}
+          <SetSyncRunner />
         </SerwistProvider>
       </body>
     </html>

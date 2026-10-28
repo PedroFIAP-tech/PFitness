@@ -26,7 +26,8 @@ export function Card({ variant = "default", className, children, ...props }: Car
   );
 }
 
-function CornerBrackets() {
+/** Cantoneiras lime nos quatro cantos (o pai precisa ser `relative`). */
+export function CornerBrackets() {
   const bracket = "pointer-events-none absolute size-2.5 border-lime/80";
   return (
     <>

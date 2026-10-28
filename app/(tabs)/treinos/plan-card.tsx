@@ -3,19 +3,22 @@
 import Link from "next/link";
 import { useId } from "react";
 import { buttonStyles } from "@/components/ui/button";
-import { ChevronDownIcon, PlayIcon } from "@/components/ui/icons";
+import { ChevronDownIcon } from "@/components/ui/icons";
+import { StartWorkoutButton } from "@/components/workout/start-workout-button";
 import { cn } from "@/lib/cn";
 import { formatNumber, plural } from "@/lib/format";
+import type { ActiveSession } from "@/lib/workout-session";
 import type { PlanOverview } from "@/lib/workouts";
 
 type PlanCardProps = {
   plan: PlanOverview;
   isNext: boolean;
+  activeSession: ActiveSession | null;
   open: boolean;
   onToggle: () => void;
 };
 
-export function PlanCard({ plan, isNext, open, onToggle }: PlanCardProps) {
+export function PlanCard({ plan, isNext, activeSession, open, onToggle }: PlanCardProps) {
   const bodyId = useId();
   const totalSets = plan.exercises.reduce((sum, item) => sum + item.targetSets, 0);
   const meta = [
@@ -119,10 +122,14 @@ export function PlanCard({ plan, isNext, open, onToggle }: PlanCardProps) {
               >
                 Editar
               </Link>
-              <Link href={`/treino/${plan.id}`} className={buttonStyles({ size: "sm" })}>
-                <PlayIcon className="h-3.25 w-2.75" />
-                Iniciar
-              </Link>
+              {plan.exercises.length > 0 ? (
+                <StartWorkoutButton planId={plan.id} planCode={plan.code} active={activeSession} />
+              ) : (
+                <span className={buttonStyles({ size: "sm", className: "pointer-events-none opacity-40" })}>
+                  Iniciar
+                </span>
+              )}
+
             </div>
           </div>
         </div>

@@ -8,6 +8,8 @@ export type LibraryExercise = {
   name: string;
   muscleGroup: string;
   equipment: string | null;
+  /** Passo da roleta de kg */
+  weightIncrement: number;
 };
 
 export type PlanExercise = {
@@ -37,7 +39,7 @@ const MUSCLE_GROUP_ORDER = ["Peito", "Costas", "Pernas", "Ombros", "Bíceps", "T
 const PLAN_CODES = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 
 const PLAN_SELECT =
-  "id, code, title, plan_exercises(position, target_sets, target_reps, rest_seconds, exercises(id, name, muscle_group, equipment))";
+  "id, code, title, plan_exercises(position, target_sets, target_reps, rest_seconds, exercises(id, name, muscle_group, equipment, weight_increment))";
 
 /** Fichas ativas com "última vez", última carga e a próxima da sequência (badge HOJE). */
 export async function getPlansOverview(): Promise<{
@@ -147,7 +149,7 @@ export async function getExerciseLibrary(): Promise<{
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("exercises")
-    .select("id, name, muscle_group, equipment");
+    .select("id, name, muscle_group, equipment, weight_increment");
   if (error) throw error;
 
   const exercises = data.map(toLibraryExercise).sort(
@@ -165,7 +167,13 @@ function groupRank(group: string) {
   return index === -1 ? MUSCLE_GROUP_ORDER.length : index;
 }
 
-type ExerciseRow = { id: number; name: string; muscle_group: string; equipment: string | null };
+type ExerciseRow = {
+  id: number;
+  name: string;
+  muscle_group: string;
+  equipment: string | null;
+  weight_increment: number;
+};
 
 type PlanRow = {
   id: number;
@@ -179,8 +187,14 @@ type PlanRow = {
   }[];
 };
 
-function toLibraryExercise(row: ExerciseRow): LibraryExercise {
-  return { id: row.id, name: row.name, muscleGroup: row.muscle_group, equipment: row.equipment };
+export function toLibraryExercise(row: ExerciseRow): LibraryExercise {
+  return {
+    id: row.id,
+    name: row.name,
+    muscleGroup: row.muscle_group,
+    equipment: row.equipment,
+    weightIncrement: row.weight_increment,
+  };
 }
 
 function toWorkoutPlan(row: PlanRow): WorkoutPlan {

@@ -569,9 +569,37 @@ export type Database = {
     }
     Functions: {
       current_streak: { Args: { p_user: string }; Returns: number }
+      discard_workout: { Args: { p_session_id: number }; Returns: undefined }
+      exercise_bests_before: {
+        Args: { p_session_id: number }
+        Returns: { best_kg: number; exercise_id: number }[]
+      }
+      finish_workout: {
+        Args: { p_session_id: number }
+        Returns: { streak_after: number; streak_before: number }[]
+      }
+      log_set: {
+        Args: {
+          p_exercise_id: number
+          p_reps: number
+          p_session_id: number
+          p_set_number: number
+          p_status: Database["public"]["Enums"]["set_status"]
+          p_weight_kg: number
+        }
+        Returns: { is_pr: boolean; previous_best: number | null; set_id: number }[]
+      }
       save_workout_plan: {
         Args: { p_exercises: Json; p_plan_id?: number; p_title: string }
         Returns: number
+      }
+      start_workout: {
+        Args: { p_discard_session_id?: number; p_plan_id: number }
+        Returns: number
+      }
+      undo_set: {
+        Args: { p_exercise_id: number; p_session_id: number; p_set_number: number }
+        Returns: undefined
       }
     }
     Enums: {

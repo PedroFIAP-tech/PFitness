@@ -52,6 +52,22 @@ export function ChevronLeftIcon(props: IconProps) {
   );
 }
 
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <StrokeIcon {...props}>
+      <path d="M9 6l6 6-6 6" />
+    </StrokeIcon>
+  );
+}
+
+export function ArrowRightIcon(props: IconProps) {
+  return (
+    <StrokeIcon strokeWidth={2.4} {...props}>
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </StrokeIcon>
+  );
+}
+
 export function ArrowUpIcon(props: IconProps) {
   return (
     <StrokeIcon {...props}>
