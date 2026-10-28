@@ -13,7 +13,8 @@ export { AiError, type AiErrorCode } from "./errors";
 
 /**
  * Provedor configurado por variáveis de ambiente (só no servidor):
- * AI_PROVIDER (padrão "openai"), AI_MODEL (opcional) e OPENAI_API_KEY.
+ * AI_PROVIDER (padrão "openai"), AI_MODEL e AI_REASONING_EFFORT (opcionais) e
+ * OPENAI_API_KEY.
  */
 function getProvider(): StructuredProvider {
   const provider = process.env.AI_PROVIDER?.trim() || "openai";
@@ -23,7 +24,7 @@ function getProvider(): StructuredProvider {
     case "openai": {
       const apiKey = process.env.OPENAI_API_KEY?.trim();
       if (!apiKey) throw new AiError("not_configured", "OPENAI_API_KEY ausente");
-      return createOpenAIProvider(apiKey, model);
+      return createOpenAIProvider(apiKey, model, process.env.AI_REASONING_EFFORT?.trim() || undefined);
     }
     default:
       throw new AiError("not_configured", `AI_PROVIDER desconhecido: ${provider}`);

@@ -7,9 +7,22 @@ import type { StructuredRequest, StructuredProvider } from "./types";
 /** Modelo padrão: o mais barato da OpenAI com structured outputs (out/2026). */
 export const OPENAI_DEFAULT_MODEL = "gpt-6-luna";
 
+/**
+ * Raciocínio desligado: extrair texto não precisa "pensar", e a leitura cai de
+ * ~20 s para ~7 s com o mesmo resultado (medido com um treino de 5 dias).
+ * "off" omite o parâmetro, para modelos sem raciocínio.
+ */
+export const OPENAI_DEFAULT_REASONING_EFFORT = "none";
+
+type ReasoningEffort = "none" | "low" | "medium" | "high";
+
 const TIMEOUT_MS = 60_000;
 
-export function createOpenAIProvider(apiKey: string, model = OPENAI_DEFAULT_MODEL): StructuredProvider {
+export function createOpenAIProvider(
+  apiKey: string,
+  model = OPENAI_DEFAULT_MODEL,
+  reasoningEffort: string = OPENAI_DEFAULT_REASONING_EFFORT,
+): StructuredProvider {
   const client = new OpenAI({ apiKey, timeout: TIMEOUT_MS, maxRetries: 1 });
 
   return {
@@ -21,6 +34,7 @@ export function createOpenAIProvider(apiKey: string, model = OPENAI_DEFAULT_MODE
           instructions,
           input,
           text: { format: zodTextFormat(schema, schemaName) },
+          ...(reasoningEffort !== "off" && { reasoning: { effort: reasoningEffort as ReasoningEffort } }),
         });
         if (response.output_parsed == null) {
           throw new AiError("invalid_response", "Resposta sem JSON (recusa ou texto livre)");
@@ -41,6 +55,10 @@ function toAiError(error: unknown, model: string): AiError {
       return new AiError("model_unavailable", `Sem acesso ao modelo ${model}`, { cause: error });
     }
     if (error.status === 401) return new AiError("not_configured", "Chave da OpenAI inválida", { cause: error });
+    // Ex.: AI_REASONING_EFFORT com um valor que o modelo não aceita
+    if (error.status === 400 && error.param?.startsWith("reasoning")) {
+      return new AiError("not_configured", `Parâmetro de raciocínio inválido para ${model}`, { cause: error });
+    }
     if (error.status === 429) return new AiError("rate_limited", "Limite da OpenAI atingido", { cause: error });
   }
   // JSON que não bate com o schema cai aqui (erro de parse do helper)
