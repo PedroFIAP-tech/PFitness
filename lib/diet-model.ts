@@ -8,6 +8,7 @@ export type MealType = Enums<"meal_type">;
 
 export const MEALS: { id: MealType; name: string }[] = [
   { id: "cafe", name: "Café da manhã" },
+  { id: "lanche_manha", name: "Lanche da manhã" },
   { id: "almoco", name: "Almoço" },
   { id: "lanche", name: "Lanche" },
   { id: "jantar", name: "Jantar" },
@@ -22,11 +23,76 @@ export const MEAL_NAMES = Object.fromEntries(MEALS.map((meal) => [meal.id, meal.
 /** Preposição antes do nome da refeição: "adicionado ao almoço", "à ceia". */
 export const MEAL_PREPOSITION: Record<MealType, string> = {
   cafe: "ao",
+  lanche_manha: "ao",
   almoco: "ao",
   lanche: "ao",
   jantar: "ao",
   ceia: "à",
 };
+
+/** Uma refeição do plano do usuário (profiles.meal_plan), com horário aproximado "HH:MM". */
+export type MealPlanEntry = { meal: MealType; time: string };
+
+/** Horário sugerido de cada refeição no onboarding. */
+export const DEFAULT_MEAL_TIMES: Record<MealType, string> = {
+  cafe: "07:00",
+  lanche_manha: "10:00",
+  almoco: "12:30",
+  lanche: "16:00",
+  jantar: "19:30",
+  ceia: "22:00",
+};
+
+/** Plano de quem ainda não escolheu as refeições. */
+export const DEFAULT_MEAL_PLAN: MealPlanEntry[] = (["cafe", "almoco", "lanche", "jantar"] as const).map((meal) => ({
+  meal,
+  time: DEFAULT_MEAL_TIMES[meal],
+}));
+
+/** Peso de cada refeição na divisão da meta do dia: as principais pesam mais. */
+export const MEAL_WEIGHTS: Record<MealType, number> = {
+  cafe: 2,
+  lanche_manha: 1,
+  almoco: 3,
+  lanche: 1,
+  jantar: 3,
+  ceia: 1,
+};
+
+/** Lê profiles.meal_plan; null se estiver vazio ou fora do formato. */
+export function parseMealPlan(value: unknown): MealPlanEntry[] | null {
+  if (!Array.isArray(value)) return null;
+  const plan = value.flatMap((entry): MealPlanEntry[] =>
+    entry &&
+    typeof entry === "object" &&
+    typeof entry.meal === "string" &&
+    entry.meal in MEAL_NAMES &&
+    typeof entry.time === "string" &&
+    /^([01]\d|2[0-3]):[0-5]\d$/.test(entry.time)
+      ? [{ meal: entry.meal as MealType, time: entry.time }]
+      : [],
+  );
+  return plan.length > 0 ? plan : null;
+}
+
+/** Meta de cada refeição do plano: a meta do dia dividida pelos pesos. */
+export function mealGoals(plan: MealPlanEntry[], goals: Nutrients): Map<MealType, Nutrients> {
+  const total = plan.reduce((sum, entry) => sum + MEAL_WEIGHTS[entry.meal], 0);
+  return new Map(
+    plan.map((entry) => {
+      const share = MEAL_WEIGHTS[entry.meal] / total;
+      return [
+        entry.meal,
+        {
+          kcal: Math.round((goals.kcal * share) / 10) * 10,
+          protein: Math.round(goals.protein * share),
+          carbs: Math.round(goals.carbs * share),
+          fat: Math.round(goals.fat * share),
+        },
+      ];
+    }),
+  );
+}
 
 /** Pontos de cada alimento registrado (log_food no banco). */
 export const FOOD_POINTS = 5;
@@ -71,8 +137,12 @@ export type MealGroup = {
   name: string;
   /** Horário do primeiro registro ("07:40"), null sem itens */
   time: string | null;
+  /** Horário aproximado do plano, null para refeição fora dele */
+  plannedTime: string | null;
   items: DiaryItem[];
   totals: Nutrients;
+  /** Meta desta refeição, null para refeição fora do plano */
+  goal: Nutrients | null;
 };
 
 const ZERO: Nutrients = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
@@ -122,24 +192,30 @@ export function foodOfItem(item: DiaryItem, foods: Food[]): Food {
   };
 }
 
-/** Café, almoço, lanche e jantar sempre; ceia só com item. */
-export function groupByMeal(items: DiaryItem[]): MealGroup[] {
-  return MEALS.flatMap(({ id, name }) => {
-    const mealItems = items.filter((item) => item.meal === id);
-    if (id === "ceia" && mealItems.length === 0) return [];
+/**
+ * As refeições do plano, na ordem do usuário e com a meta de cada uma. Uma
+ * refeição fora do plano que tenha item no dia aparece no fim, para nada sumir.
+ */
+export function groupByMeal(items: DiaryItem[], plan: MealPlanEntry[], goals: Nutrients): MealGroup[] {
+  const goalsByMeal = mealGoals(plan, goals);
+  const planned = new Map(plan.map((entry) => [entry.meal, entry.time]));
+  const extras = MEALS.filter(({ id }) => !planned.has(id) && items.some((item) => item.meal === id)).map(({ id }) => id);
+
+  return [...plan.map((entry) => entry.meal), ...extras].map((meal) => {
+    const mealItems = items.filter((item) => item.meal === meal);
     const first = mealItems.reduce<string | null>(
       (earliest, item) => (earliest === null || item.loggedAt < earliest ? item.loggedAt : earliest),
       null,
     );
-    return [
-      {
-        meal: id,
-        name,
-        time: first ? formatTimeOfDay(new Date(first)) : null,
-        items: mealItems,
-        totals: sumNutrients(mealItems.map((item) => item.nutrients)),
-      },
-    ];
+    return {
+      meal,
+      name: MEAL_NAMES[meal],
+      time: first ? formatTimeOfDay(new Date(first)) : null,
+      plannedTime: planned.get(meal) ?? null,
+      items: mealItems,
+      totals: sumNutrients(mealItems.map((item) => item.nutrients)),
+      goal: goalsByMeal.get(meal) ?? null,
+    };
   });
 }
 

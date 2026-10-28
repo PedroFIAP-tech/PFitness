@@ -4,7 +4,8 @@ import { cn } from "@/lib/cn";
 
 type SegmentedProps<T extends string> = {
   options: readonly { value: T; label: string }[];
-  value: T;
+  /** null: nada escolhido ainda (sem indicador) */
+  value: T | null;
   onChange: (value: T) => void;
   "aria-label": string;
   className?: string;
@@ -30,14 +31,16 @@ export function Segmented<T extends string>({
       )}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
-      <span
-        aria-hidden
-        className="absolute inset-y-1 rounded-xl border border-lime/55 bg-lime/14 shadow-glow transition-[left] duration-400 ease-snap"
-        style={{
-          width: `calc((100% - 8px) / ${options.length})`,
-          left: `calc(4px + (100% - 8px) / ${options.length} * ${activeIndex})`,
-        }}
-      />
+      {activeIndex !== -1 && (
+        <span
+          aria-hidden
+          className="absolute inset-y-1 animate-fade-in rounded-xl border border-lime/55 bg-lime/14 shadow-glow transition-[left] duration-400 ease-snap"
+          style={{
+            width: `calc((100% - 8px) / ${options.length})`,
+            left: `calc(4px + (100% - 8px) / ${options.length} * ${activeIndex})`,
+          }}
+        />
+      )}
       {options.map((option) => {
         const active = option.value === value;
         return (

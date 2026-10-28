@@ -85,3 +85,15 @@ const timeFormat = new Intl.DateTimeFormat("pt-BR", {
 export function formatTimeOfDay(date: Date): string {
   return timeFormat.format(date);
 }
+
+const shortDateFormat = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: APP_TIME_ZONE,
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+/** Ex.: "12 mar 2026". */
+export function formatShortDate(date: Date): string {
+  return shortDateFormat.format(date).replace(/\./g, "").replace(/ de /g, " ");
+}

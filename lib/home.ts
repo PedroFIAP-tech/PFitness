@@ -5,10 +5,9 @@ import { getDayNutrition } from "@/lib/diet";
 import type { Nutrients } from "@/lib/diet-model";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveSession, getWorkoutSummary, type ActiveSession, type WorkoutSummary } from "@/lib/workout-session";
+import { levelFromXp } from "@/lib/xp";
 import { getPlansOverview, type PlansOverview, type WorkoutPlan } from "@/lib/workouts";
 
-/** XP por nível (o mesmo de v_user_xp). */
-export const XP_PER_LEVEL = 800;
 
 const WEEK_DAYS = 7;
 const WEEKDAY_INITIALS = ["D", "S", "T", "Q", "Q", "S", "S"];
@@ -118,7 +117,7 @@ export async function getHomeData(): Promise<HomeData> {
       week: pointsWeek,
       weekTotal: pointsWeek.reduce((sum, day) => sum + day.points, 0),
       xp,
-      level: Math.floor(xp / XP_PER_LEVEL) + 1,
+      level: levelFromXp(xp),
     },
   };
 }

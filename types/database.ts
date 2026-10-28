@@ -76,6 +76,7 @@ export type Database = {
           id: number
           kcal: number
           protein_g: number
+          source: string
           user_id: string
           valid_from: string
         }
@@ -85,6 +86,7 @@ export type Database = {
           id?: never
           kcal: number
           protein_g: number
+          source?: string
           user_id: string
           valid_from?: string
         }
@@ -94,6 +96,7 @@ export type Database = {
           id?: never
           kcal?: number
           protein_g?: number
+          source?: string
           user_id?: string
           valid_from?: string
         }
@@ -319,31 +322,49 @@ export type Database = {
       }
       profiles: {
         Row: {
+          activity_level: string | null
           birth_date: string | null
           created_at: string
+          dietary_restrictions: string[]
           goal: Database["public"]["Enums"]["goal_type"]
+          goal_suggestion_dismissed_at: string | null
           height_cm: number | null
           id: string
+          meal_plan: Json | null
           name: string
+          onboarded_at: string | null
           sex: Database["public"]["Enums"]["sex_type"] | null
+          workouts_per_week: number | null
         }
         Insert: {
+          activity_level?: string | null
           birth_date?: string | null
           created_at?: string
+          dietary_restrictions?: string[]
           goal?: Database["public"]["Enums"]["goal_type"]
+          goal_suggestion_dismissed_at?: string | null
           height_cm?: number | null
           id: string
+          meal_plan?: Json | null
           name: string
+          onboarded_at?: string | null
           sex?: Database["public"]["Enums"]["sex_type"] | null
+          workouts_per_week?: number | null
         }
         Update: {
+          activity_level?: string | null
           birth_date?: string | null
           created_at?: string
+          dietary_restrictions?: string[]
           goal?: Database["public"]["Enums"]["goal_type"]
+          goal_suggestion_dismissed_at?: string | null
           height_cm?: number | null
           id?: string
+          meal_plan?: Json | null
           name?: string
+          onboarded_at?: string | null
           sex?: Database["public"]["Enums"]["sex_type"] | null
+          workouts_per_week?: number | null
         }
         Relationships: []
       }
@@ -636,6 +657,7 @@ export type Database = {
         Returns: number
       }
       longest_streak: { Args: { p_user: string }; Returns: number }
+      log_weight: { Args: { p_weight_kg: number }; Returns: undefined }
       log_set: {
         Args: {
           p_exercise_id: number
@@ -651,9 +673,32 @@ export type Database = {
         Args: { p_from: string }
         Returns: { day: string; points: number }[]
       }
+      save_onboarding: {
+        Args: {
+          p_activity_level: string
+          p_birth_date: string
+          p_carbs_g: number
+          p_fat_g: number
+          p_goal: Database["public"]["Enums"]["goal_type"]
+          p_goals_source: string
+          p_height_cm: number
+          p_kcal: number
+          p_meal_plan: Json
+          p_protein_g: number
+          p_restrictions: string[]
+          p_sex: Database["public"]["Enums"]["sex_type"]
+          p_weight_kg: number
+          p_workouts_per_week: number
+        }
+        Returns: undefined
+      }
       save_workout_plan: {
         Args: { p_exercises: Json; p_plan_id?: number; p_title: string; p_weekday?: number }
         Returns: number
+      }
+      set_daily_goals: {
+        Args: { p_carbs_g: number; p_fat_g: number; p_kcal: number; p_protein_g: number; p_source: string }
+        Returns: undefined
       }
       start_workout: {
         Args: { p_discard_session_id?: number; p_plan_id: number }
@@ -663,6 +708,10 @@ export type Database = {
         Args: { p_grams: number; p_log_id: number }
         Returns: undefined
       }
+      sync_achievements: {
+        Args: never
+        Returns: { achievement_id: string; progress: number; target: number; unlocked_at: string | null }[]
+      }
       undo_set: {
         Args: { p_exercise_id: number; p_session_id: number; p_set_number: number }
         Returns: undefined
@@ -670,7 +719,7 @@ export type Database = {
     }
     Enums: {
       goal_type: "ganhar_massa" | "perder_gordura" | "manter"
-      meal_type: "cafe" | "almoco" | "lanche" | "jantar" | "ceia"
+      meal_type: "cafe" | "lanche_manha" | "almoco" | "lanche" | "jantar" | "ceia"
       point_kind:
         | "serie"
         | "pr"
@@ -809,7 +858,7 @@ export const Constants = {
   public: {
     Enums: {
       goal_type: ["ganhar_massa", "perder_gordura", "manter"],
-      meal_type: ["cafe", "almoco", "lanche", "jantar", "ceia"],
+      meal_type: ["cafe", "lanche_manha", "almoco", "lanche", "jantar", "ceia"],
       point_kind: [
         "serie",
         "pr",

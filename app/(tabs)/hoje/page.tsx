@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Screen, ScreenHeader, ScreenHeaderSkeleton } from "@/components/app-shell/screen";
+import { getCurrentProfile } from "@/lib/auth";
 import { formatDayLabel } from "@/lib/date";
 import { initials } from "@/lib/format";
 import { getHomeData } from "@/lib/home";
@@ -23,6 +25,10 @@ export default function HojePage() {
 }
 
 async function HojeContent() {
+  // Primeiro acesso: o onboarding calcula as metas antes de mostrar a Hoje
+  const profile = await getCurrentProfile();
+  if (!profile.onboarded_at) redirect("/onboarding");
+
   const data = await getHomeData();
 
   return (

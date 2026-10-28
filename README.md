@@ -45,6 +45,7 @@ O schema base está em [`docs/pfitness_schema.sql`](docs/pfitness_schema.sql). A
 | `20261028120000_food_log.sql` | Diário alimentar: `log_food` (registro + 5 pontos), `update_food_log`, `delete_food_log` (estorna os pontos), `food_day_is_open` (só hoje e ontem aceitam mudanças) e `food_id` em `v_food_log_detail` |
 | `20261028140000_home_stats.sql` | Aba Hoje (só leitura): `longest_streak` (recorde, mesma regra da `current_streak`), `activity_days` (treino/alimentação por dia) e `points_by_day` (pontos por dia em America/Sao_Paulo) |
 | `20261028160000_workout_import.sql` | Importar treino por texto: `plan_exercises.notes`, `workout_plans.weekday`, letras únicas só entre fichas ativas, `save_workout_plan` com dia e observação, `import_workout_plans` (exercícios novos + fichas numa transação), `ai_usage` + `claim_ai_usage` (limite diário da IA) |
+| `20261029120000_profile_onboarding.sql` | Perfil e onboarding: `lanche_manha` em `meal_type`, colunas de rotina/treinos/refeições/restrições em `profiles`, `daily_goals.source`, `save_onboarding`, `log_weight`, `set_daily_goals` e `sync_achievements` (progresso e desbloqueio das conquistas) |
 
 ## Scripts
 
@@ -54,6 +55,7 @@ O schema base está em [`docs/pfitness_schema.sql`](docs/pfitness_schema.sql). A
 | `npm run build` | `next build` e depois gera `public/sw.js` (`scripts/build-sw.mjs`) |
 | `npm start` | Serve o build de produção |
 | `npm run lint` / `npm run typecheck` | ESLint / TypeScript |
+| `npm test` | Testes de `lib/**/*.test.ts` com `node:test` (Node 22.18+ roda TypeScript direto) |
 | `npm run icons` | Regenera os PNGs do PWA a partir de `app/icon.svg` |
 | `npm run db:types` | Regenera `types/database.ts` a partir do banco (veja abaixo) |
 
@@ -80,8 +82,8 @@ app/
   (tabs)/                abas com tab bar: hoje (streak, treino do dia, alimentação, pontos),
                          treinos, dieta (diário + sheet de alimento),
                          progresso, perfil
-  (focus)/               telas cheias sem tab bar: nova/editar ficha, importar texto,
-                         treino em andamento, resumo do treino
+  (focus)/               telas cheias sem tab bar: onboarding, nova/editar ficha, importar
+                         texto, treino em andamento, resumo do treino
   auth/callback/         destino do link de confirmação de email
   ~offline/              fallback do service worker sem rede
   sw.ts  manifest.ts  icon.svg  apple-icon.png
@@ -104,6 +106,9 @@ lib/
   home.ts                aba Hoje: tudo buscado em paralelo (servidor)
   diet.ts                dia do diário: itens, meta vigente, catálogo e recentes (servidor)
   diet-model.ts          regras da dieta: refeições, porções, totais, dias abertos (servidor e cliente)
+  nutrition-calc.ts      metas calculadas (Mifflin-St Jeor) e meta adaptativa, com testes
+  profile-data.ts        aba Perfil e valores do onboarding (servidor)
+  profile-model.ts       opções e limites do onboarding/Perfil (servidor e cliente)
   date.ts                datas em America/Sao_Paulo
 types/database.ts        tipos do schema
 supabase/migrations/     SQL aplicado depois do schema base
@@ -124,8 +129,25 @@ scripts/                 build do service worker e geração de ícones
 - **Importar treino por texto (IA):** `/treinos/importar` manda o texto (até 8.000 caracteres) para a IA em `lib/ai/`, que devolve JSON validado com zod; o servidor casa cada exercício com a biblioteca por nome normalizado **e** equipamento (`lib/workout-import.ts`). A chave fica só no servidor (`OPENAI_API_KEY`); o provedor e o modelo mudam por `AI_PROVIDER`/`AI_MODEL` (padrão `gpt-6-luna`, ~US$ 0,002 por importação). O raciocínio do modelo fica desligado (`AI_REASONING_EFFORT=none`): para extrair texto não muda o resultado e a leitura cai de ~20 s para ~7 s. Cada leitura conta no limite de 10 por usuário por dia (`claim_ai_usage`, a única função `security definer`: o usuário só lê `ai_usage`, então não consegue zerar o próprio limite).
 - **Badge HOJE:** a ficha com o dia da semana de hoje; sem ela, a sequência entre as fichas sem dia; se todas têm dia e nenhuma é hoje, é dia de descanso (a aba Hoje mostra a próxima com "Treinar mesmo assim").
 
+- **Onboarding e metas:** no primeiro acesso (`profiles.onboarded_at` nulo) a aba Hoje manda para `/onboarding`; o Perfil tem "Refazer onboarding". As metas são calculadas em `lib/nutrition-calc.ts`, sem IA:
+  - TMB por Mifflin-St Jeor (10·kg + 6,25·cm − 5·idade, +5 homens, −161 mulheres, −78 "outro").
+  - Fator de atividade = base da rotina + 0,05 por treino na semana, teto 1,9:
+
+    | Rotina | Base | 3×/sem | 5×/sem |
+    | --- | --- | --- | --- |
+    | Sedentária | 1,20 | 1,35 | 1,45 |
+    | Moderada | 1,35 | 1,50 | 1,60 |
+    | Ativa | 1,50 | 1,65 | 1,75 |
+
+  - Objetivo (`GOAL_KCAL_ADJUSTMENT`): ganhar massa +300, perder gordura −400, manter 0; kcal arredondadas para múltiplos de 50 (piso 1.200).
+  - Proteína 2,0 g/kg (2,2 para perder gordura), gordura 0,9 g/kg, carbo com o restante (mínimo 50 g).
+  - Metas e peso são gravados com a data de hoje (`daily_goals`/`weight_logs`, um registro por dia); os dias anteriores ficam no histórico. `daily_goals.source` diz se a meta é padrão, calculada ou personalizada.
+- **Meta adaptativa:** com ≥ 4 pesagens em ≥ 14 dias nas últimas 3 semanas (descartando as que diferem mais de 3 kg das vizinhas), a tendência do peso é comparada ao esperado (+0,25 kg/sem para massa, −0,5% do peso/sem para perder, 0 para manter, tolerância ±0,15). Fora da tolerância, o Perfil sugere ±100–200 kcal; "Ignorar" esconde por 7 dias.
+- **Refeições:** `profiles.meal_plan` guarda as refeições escolhidas e os horários; a Dieta mostra só elas, na ordem do usuário, com a meta de cada uma (pesos: almoço e jantar 3, café 2, lanches e ceia 1).
+
 ## Pendências
 
 - **Travar `point_events` antes da parte de competição.** Hoje o RLS (`own_rows`) deixa o próprio usuário inserir pontos direto pela API. Antes de rankings/competição, revogar `insert`/`update`/`delete` dessa tabela para `authenticated` e gravar pontos só pelas funções (`log_set`, `finish_workout`…), que então passam a ser `security definer` com checagem explícita de `auth.uid()`.
+- **Travar `user_achievements` antes da competição.** Como em `point_events`, o RLS (`own_rows`) deixa o usuário inserir conquistas direto. Antes de rankings, gravar só por `sync_achievements` (que então vira `security definer`).
 - **Rever a regra da sequência antes da competição.** Hoje o dia conta com um treino concluído ou com qualquer alimento registrado, então registrar 1 item já mantém a streak. Uma regra mais justa: alimentação só conta com ≥ 70% da meta de kcal do dia. A regra vive em `current_streak` (schema base) e `longest_streak` (`20261028140000_home_stats.sql`), e as duas precisam mudar juntas; `activity_days` usa a mesma definição para a faixa dos 7 dias.
 - **Teto de pontos por alimento antes da competição.** Hoje cada alimento registrado vale +5 sem limite, então dá para farmar pontos com dezenas de itens de 1 g. Antes de rankings, limitar em `log_food` (ex.: pontos só para os 10 primeiros itens do dia) e incluir `food_logs` no travamento acima (`update`/`delete` só pelas funções).

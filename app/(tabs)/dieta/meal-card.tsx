@@ -24,9 +24,12 @@ export function MealCard({ group, editable, disabled, onAdd, onEdit }: MealCardP
         <div className="flex flex-1 flex-col gap-1.25">
           <span className="flex items-baseline gap-2">
             <h2 className="font-display text-[17px] font-semibold">{group.name}</h2>
-            <span className="font-mono text-[11px] font-medium text-fg/45">{group.time ?? "—"}</span>
+            <span className="font-mono text-[11px] font-medium text-fg/45">
+              {group.time ?? (group.plannedTime ? `~${group.plannedTime}` : "—")}
+            </span>
           </span>
           <span className="font-mono text-[11px] font-medium text-fg/50">{formatMacros(group.totals)}</span>
+          {group.goal && <MealGoalLine goal={group.goal} totals={group.totals} />}
         </div>
         <span className="flex items-baseline gap-1">
           <span className="font-mono text-xl font-semibold tracking-[-0.03em] tabular-nums">
@@ -60,6 +63,21 @@ export function MealCard({ group, editable, disabled, onAdd, onEdit }: MealCardP
         </button>
       )}
     </section>
+  );
+}
+
+/** "meta 690 kcal · faltam 32 g de proteína" ou "proteína ok". */
+function MealGoalLine({ goal, totals }: { goal: MealGroup["totals"]; totals: MealGroup["totals"] }) {
+  const missingProtein = Math.round(goal.protein - totals.protein);
+  return (
+    <span className="font-mono text-[11px] font-medium text-fg/45">
+      meta {formatNumber(goal.kcal)} kcal ·{" "}
+      {missingProtein > 0 ? (
+        <span className="text-lime/80">faltam {missingProtein} g de proteína</span>
+      ) : (
+        <span className="text-lime">proteína ok ✓</span>
+      )}
+    </span>
   );
 }
 

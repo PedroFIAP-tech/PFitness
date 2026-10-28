@@ -1,6 +1,13 @@
 import "server-only";
-import { getSessionUser } from "@/lib/auth";
-import type { DiaryItem, Food, Nutrients } from "@/lib/diet-model";
+import { getCurrentProfile, getSessionUser } from "@/lib/auth";
+import {
+  DEFAULT_MEAL_PLAN,
+  parseMealPlan,
+  type DiaryItem,
+  type Food,
+  type MealPlanEntry,
+  type Nutrients,
+} from "@/lib/diet-model";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
 
@@ -14,6 +21,8 @@ export type DiaryDay = {
   foods: Food[];
   /** Ids dos alimentos registrados mais recentemente (chips do "Adicionar") */
   recentFoodIds: number[];
+  /** Refeições do usuário, na ordem dele */
+  mealPlan: MealPlanEntry[];
 };
 
 const RECENT_LIMIT = 8;
@@ -33,7 +42,7 @@ type FoodRow = Pick<
 export async function getDiaryDay(day: string): Promise<DiaryDay> {
   const [supabase, user] = await Promise.all([createClient(), getSessionUser()]);
 
-  const [itemsResult, goalsResult, foodsResult, recentResult] = await Promise.all([
+  const [itemsResult, goalsResult, foodsResult, recentResult, profile] = await Promise.all([
     supabase
       .from("v_food_log_detail")
       .select("id, food_id, name, meal, grams, logged_at, kcal, protein_g, carbs_g, fat_g")
@@ -55,6 +64,7 @@ export async function getDiaryDay(day: string): Promise<DiaryDay> {
       .eq("user_id", user.id)
       .order("logged_at", { ascending: false })
       .limit(RECENT_SCAN),
+    getCurrentProfile(),
   ]);
   if (itemsResult.error) throw itemsResult.error;
   if (goalsResult.error) throw goalsResult.error;
@@ -90,7 +100,7 @@ export async function getDiaryDay(day: string): Promise<DiaryDay> {
 
   const recentFoodIds = [...new Set(recentResult.data.map((row) => row.food_id))].slice(0, RECENT_LIMIT);
 
-  return { day, goals, items, foods, recentFoodIds };
+  return { day, goals, items, foods, recentFoodIds, mealPlan: parseMealPlan(profile.meal_plan) ?? DEFAULT_MEAL_PLAN };
 }
 
 /** Totais consumidos e meta vigente de um dia (card de alimentação da aba Hoje). */

@@ -3,7 +3,8 @@ import { CountUp } from "@/components/ui/count-up";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/cn";
 import { formatNumber } from "@/lib/format";
-import { XP_PER_LEVEL, type HomeData } from "@/lib/home";
+import type { HomeData } from "@/lib/home";
+import { XP_PER_LEVEL } from "@/lib/xp";
 
 /** Pontos dos últimos 7 dias, nível e XP até o próximo nível. */
 export function PointsCard({ week, weekTotal, xp, level }: HomeData["points"]) {

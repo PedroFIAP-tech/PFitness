@@ -5,13 +5,17 @@ type StepperProps = {
   value: number;
   min: number;
   max: number;
+  /** Quanto cada toque soma ou tira (padrão 1) */
+  step?: number;
+  /** Formata o valor exibido (ex.: separador de milhar) */
+  format?: (value: number) => string;
   onChange: (value: number) => void;
   className?: string;
 };
 
 /** − valor + com rótulo técnico (séries, reps alvo). */
-export function Stepper({ label, value, min, max, onChange, className }: StepperProps) {
-  const step = (delta: number) => onChange(Math.min(max, Math.max(min, value + delta)));
+export function Stepper({ label, value, min, max, step: stepSize = 1, format = String, onChange, className }: StepperProps) {
+  const step = (direction: number) => onChange(Math.min(max, Math.max(min, value + direction * stepSize)));
   const button =
     "h-full w-12 shrink-0 font-mono text-xl font-medium text-fg/80 transition-colors active:text-lime disabled:text-fg/20";
 
@@ -32,7 +36,7 @@ export function Stepper({ label, value, min, max, onChange, className }: Stepper
       </button>
       <span className="flex flex-1 flex-col items-center gap-0.75">
         <span aria-live="polite" className="font-mono text-lg leading-none font-semibold tabular-nums">
-          {value}
+          {format(value)}
         </span>
         <span className="font-mono text-[8.5px] leading-none font-medium tracking-label text-fg/45 uppercase">
           {label}

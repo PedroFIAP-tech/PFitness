@@ -68,7 +68,7 @@ export function DietScreen({ diary, today }: { diary: DiaryDay; today: string })
 
   const editable = isDayOpen(diary.day, today);
   const totals = useMemo(() => sumNutrients(items.map((item) => item.nutrients)), [items]);
-  const meals = useMemo(() => groupByMeal(items), [items]);
+  const meals = useMemo(() => groupByMeal(items, diary.mealPlan, diary.goals), [items, diary.mealPlan, diary.goals]);
 
   const foods = useMemo(() => {
     const known = new Set(diary.foods.map((food) => food.id));
