@@ -1,6 +1,6 @@
 import "server-only";
 import { getSessionUser } from "@/lib/auth";
-import { formatDaysAgo } from "@/lib/date";
+import { dayToDate, formatDaysAgo, todayInAppTimeZone } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
 
 export type LibraryExercise = {
@@ -17,12 +17,16 @@ export type PlanExercise = {
   targetSets: number;
   targetReps: number;
   restSeconds: number;
+  /** Observação da ficha ("cada perna") */
+  notes: string | null;
 };
 
 export type WorkoutPlan = {
   id: number;
   code: string;
   title: string;
+  /** Dia fixo da semana (0 = domingo … 6 = sábado), null se segue a sequência */
+  weekday: number | null;
   exercises: PlanExercise[];
 };
 
@@ -39,13 +43,18 @@ const MUSCLE_GROUP_ORDER = ["Peito", "Costas", "Pernas", "Ombros", "Bíceps", "T
 const PLAN_CODES = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 
 const PLAN_SELECT =
-  "id, code, title, plan_exercises(position, target_sets, target_reps, rest_seconds, exercises(id, name, muscle_group, equipment, weight_increment))";
+  "id, code, title, weekday, plan_exercises(position, target_sets, target_reps, rest_seconds, notes, exercises(id, name, muscle_group, equipment, weight_increment))";
 
-/** Fichas ativas com "última vez", última carga e a próxima da sequência (badge HOJE). */
-export async function getPlansOverview(): Promise<{
+export type PlansOverview = {
   plans: PlanOverview[];
+  /** Ficha do badge HOJE (null sem fichas ou em dia de descanso) */
   nextPlanId: number | null;
-}> {
+  /** Dia de descanso: todas as fichas têm dia e nenhuma é hoje. Traz a próxima. */
+  restDay: { planId: number; weekday: number } | null;
+};
+
+/** Fichas ativas com "última vez", última carga e a ficha do dia (badge HOJE). */
+export async function getPlansOverview(): Promise<PlansOverview> {
   const [supabase, user] = await Promise.all([createClient(), getSessionUser()]);
 
   const [plansResult, sessionsResult, lastSetsResult] = await Promise.all([
@@ -98,7 +107,30 @@ export async function getPlansOverview(): Promise<{
     };
   });
 
-  return { plans, nextPlanId: nextInSequence(plans, sessionsResult.data) };
+  return { plans, ...pickTodayPlan(plans, sessionsResult.data, dayToDate(todayInAppTimeZone(now)).getUTCDay()) };
+}
+
+/**
+ * Badge HOJE:
+ * 1. a ficha com o dia da semana de hoje (a primeira pela ordem, se houver várias);
+ * 2. senão, a sequência entre as fichas sem dia;
+ * 3. se todas têm dia e nenhuma é hoje, é dia de descanso (com a próxima ficha).
+ */
+function pickTodayPlan(
+  plans: WorkoutPlan[],
+  sessionsNewestFirst: { plan_id: number | null }[],
+  weekday: number,
+): Pick<PlansOverview, "nextPlanId" | "restDay"> {
+  const scheduledToday = plans.find((plan) => plan.weekday === weekday);
+  if (scheduledToday) return { nextPlanId: scheduledToday.id, restDay: null };
+
+  const unscheduled = plans.filter((plan) => plan.weekday === null);
+  if (unscheduled.length > 0) return { nextPlanId: nextInSequence(unscheduled, sessionsNewestFirst), restDay: null };
+  if (plans.length === 0) return { nextPlanId: null, restDay: null };
+
+  const daysUntil = (plan: WorkoutPlan) => ((plan.weekday as number) - weekday + 7) % 7;
+  const upcoming = plans.reduce((best, plan) => (daysUntil(plan) < daysUntil(best) ? plan : best));
+  return { nextPlanId: null, restDay: { planId: upcoming.id, weekday: upcoming.weekday as number } };
 }
 
 /** A ficha seguinte (pela ordem) à da última sessão concluída; sem histórico, a primeira. */
@@ -118,7 +150,7 @@ export function parsePlanId(value: string): number | null {
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
-/** Ficha do usuário para edição; null se não existir ou for de outro usuário. */
+/** Ficha ativa do usuário; null se não existir, estiver arquivada ou for de outro usuário. */
 export async function getPlan(planId: number): Promise<WorkoutPlan | null> {
   const [supabase, user] = await Promise.all([createClient(), getSessionUser()]);
   const { data, error } = await supabase
@@ -126,6 +158,7 @@ export async function getPlan(planId: number): Promise<WorkoutPlan | null> {
     .select(PLAN_SELECT)
     .eq("id", planId)
     .eq("user_id", user.id)
+    .eq("archived", false)
     .order("position", { referencedTable: "plan_exercises" })
     .maybeSingle();
   if (error) throw error;
@@ -179,10 +212,12 @@ type PlanRow = {
   id: number;
   code: string;
   title: string;
+  weekday: number | null;
   plan_exercises: {
     target_sets: number;
     target_reps: number;
     rest_seconds: number;
+    notes: string | null;
     exercises: ExerciseRow;
   }[];
 };
@@ -202,11 +237,13 @@ function toWorkoutPlan(row: PlanRow): WorkoutPlan {
     id: row.id,
     code: row.code,
     title: row.title,
+    weekday: row.weekday,
     exercises: row.plan_exercises.map((item) => ({
       exercise: toLibraryExercise(item.exercises),
       targetSets: item.target_sets,
       targetReps: item.target_reps,
       restSeconds: item.rest_seconds,
+      notes: item.notes,
     })),
   };
 }

@@ -12,25 +12,23 @@ type PlanListProps = {
   plans: PlanOverview[];
   nextPlanId: number | null;
   activeSession: ActiveSession | null;
-  /** Ficha recém-salva (?ficha=): abre o card e avisa. */
+  /** Ficha recém-salva (?ficha=): abre o card. */
   savedPlanId: number | null;
-  /** Código da ficha recém-excluída (?excluida=). */
-  deletedCode: string | null;
+  /** Aviso de quem chegou de salvar, excluir ou importar ("Ficha salva"). */
+  notice: string | null;
 };
 
 /** A página remonta esta lista (via `key`) quando chega de um salvar/excluir. */
-export function PlanList({ plans, nextPlanId, activeSession, savedPlanId, deletedCode }: PlanListProps) {
+export function PlanList({ plans, nextPlanId, activeSession, savedPlanId, notice }: PlanListProps) {
   const [openIds, setOpenIds] = useState(
     () => new Set([savedPlanId ?? nextPlanId].filter((id): id is number => id !== null)),
   );
-  const [toast] = useToast(
-    savedPlanId ? "Ficha salva" : deletedCode ? `Ficha ${deletedCode} excluída` : undefined,
-  );
+  const [toast] = useToast(notice ?? undefined);
 
   // O aviso já foi exibido: limpa a URL para não repetir num reload
   useEffect(() => {
-    if (savedPlanId || deletedCode) window.history.replaceState(null, "", "/treinos");
-  }, [savedPlanId, deletedCode]);
+    if (notice) window.history.replaceState(null, "", "/treinos");
+  }, [notice]);
 
   const toggle = (planId: number) =>
     setOpenIds((current) => {

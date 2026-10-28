@@ -446,6 +446,7 @@ function WorkoutSession({ data }: { data: WorkoutSessionData }) {
                 Exercício {exerciseIndex + 1}/{exercises.length} · {exercise.muscleGroup}
               </Label>
               <h1 className="font-display text-2xl leading-[1.1] font-semibold text-balance">{exercise.name}</h1>
+              {exercise.notes && <p className="-mt-0.5 text-[13px] leading-snug text-fg/60">{exercise.notes}</p>}
               <div className="flex flex-wrap justify-center gap-1.5">
                 <Tag>
                   <span className="text-fg/50">ÚLTIMA</span>

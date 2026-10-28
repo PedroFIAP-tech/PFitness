@@ -40,6 +40,35 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage: {
+        Row: {
+          created_at: string
+          id: number
+          kind: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          kind: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          kind?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_goals: {
         Row: {
           carbs_g: number
@@ -209,6 +238,7 @@ export type Database = {
         Row: {
           exercise_id: number
           id: number
+          notes: string | null
           plan_id: number
           position: number
           rest_seconds: number
@@ -218,6 +248,7 @@ export type Database = {
         Insert: {
           exercise_id: number
           id?: never
+          notes?: string | null
           plan_id: number
           position: number
           rest_seconds?: number
@@ -227,6 +258,7 @@ export type Database = {
         Update: {
           exercise_id?: number
           id?: never
+          notes?: string | null
           plan_id?: number
           position?: number
           rest_seconds?: number
@@ -437,6 +469,7 @@ export type Database = {
           position: number
           title: string
           user_id: string
+          weekday: number | null
         }
         Insert: {
           archived?: boolean
@@ -446,6 +479,7 @@ export type Database = {
           position?: number
           title: string
           user_id: string
+          weekday?: number | null
         }
         Update: {
           archived?: boolean
@@ -455,6 +489,7 @@ export type Database = {
           position?: number
           title?: string
           user_id?: string
+          weekday?: number | null
         }
         Relationships: [
           {
@@ -573,6 +608,8 @@ export type Database = {
         Args: { p_from: string }
         Returns: { day: string; food: boolean; workout: boolean }[]
       }
+      ai_usage_today: { Args: { p_kind: string }; Returns: number }
+      claim_ai_usage: { Args: { p_daily_limit: number; p_kind: string }; Returns: number }
       current_streak: { Args: { p_user: string }; Returns: number }
       discard_workout: { Args: { p_session_id: number }; Returns: undefined }
       exercise_bests_before: {
@@ -585,6 +622,10 @@ export type Database = {
       }
       delete_food_log: { Args: { p_log_id: number }; Returns: undefined }
       food_day_is_open: { Args: { p_day: string }; Returns: boolean }
+      import_workout_plans: {
+        Args: { p_plans: Json; p_replace?: boolean }
+        Returns: number[]
+      }
       log_food: {
         Args: {
           p_eaten_on: string
@@ -611,7 +652,7 @@ export type Database = {
         Returns: { day: string; points: number }[]
       }
       save_workout_plan: {
-        Args: { p_exercises: Json; p_plan_id?: number; p_title: string }
+        Args: { p_exercises: Json; p_plan_id?: number; p_title: string; p_weekday?: number }
         Returns: number
       }
       start_workout: {

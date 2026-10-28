@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { startWorkout } from "@/app/(focus)/treino/actions";
-import { Button, buttonStyles, type ButtonSize } from "@/components/ui/button";
+import { Button, buttonStyles, type ButtonSize, type ButtonVariant } from "@/components/ui/button";
 import { PlayIcon } from "@/components/ui/icons";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
@@ -19,6 +19,7 @@ type StartWorkoutButtonProps = {
   /** Treino em andamento (de qualquer ficha), se houver */
   active: ActiveSession | null;
   size?: ButtonSize;
+  variant?: ButtonVariant;
   /** Texto do botão (padrão "Iniciar") */
   label?: string;
   className?: string;
@@ -33,6 +34,7 @@ export function StartWorkoutButton({
   planCode,
   active,
   size = "sm",
+  variant,
   label = "Iniciar",
   className,
 }: StartWorkoutButtonProps) {
@@ -64,6 +66,7 @@ export function StartWorkoutButton({
     <>
       <Button
         size={size}
+        variant={variant}
         loading={pending && !conflict}
         onClick={() => (active ? setConflict(active) : start())}
         className={className}

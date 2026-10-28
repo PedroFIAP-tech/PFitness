@@ -5,7 +5,7 @@ import { getDayNutrition } from "@/lib/diet";
 import type { Nutrients } from "@/lib/diet-model";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveSession, getWorkoutSummary, type ActiveSession, type WorkoutSummary } from "@/lib/workout-session";
-import { getPlansOverview, type WorkoutPlan } from "@/lib/workouts";
+import { getPlansOverview, type PlansOverview, type WorkoutPlan } from "@/lib/workouts";
 
 /** XP por nível (o mesmo de v_user_xp). */
 export const XP_PER_LEVEL = 800;
@@ -28,6 +28,8 @@ export type StreakDay = WeekDay & { activity: "workout" | "food" | "none" };
 export type TodayWorkout =
   | { state: "no-plans" }
   | { state: "idle"; plan: WorkoutPlan; activeSession: ActiveSession | null }
+  /** Todas as fichas têm dia e nenhuma é hoje: mostra a próxima */
+  | { state: "rest"; plan: WorkoutPlan; weekday: number; activeSession: ActiveSession | null }
   | { state: "active"; session: ActiveSession; plan: WorkoutPlan | null }
   | { state: "done"; summary: WorkoutSummary; plan: WorkoutPlan | null };
 
@@ -49,7 +51,7 @@ export async function getHomeData(): Promise<HomeData> {
 
   const [
     profile,
-    { plans, nextPlanId },
+    { plans, nextPlanId, restDay },
     activeSession,
     lastFinishedResult,
     currentResult,
@@ -102,7 +104,14 @@ export async function getHomeData(): Promise<HomeData> {
   return {
     name: profile.name,
     streak: { current, record: Math.max(recordResult.data, current), week: streakWeek },
-    workout: await todayWorkout({ plans, nextPlanId, activeSession, lastFinished: lastFinishedResult.data, today }),
+    workout: await todayWorkout({
+      plans,
+      nextPlanId,
+      restDay,
+      activeSession,
+      lastFinished: lastFinishedResult.data,
+      today,
+    }),
     division: plans.map((plan) => plan.code).join(""),
     nutrition,
     points: {
@@ -117,12 +126,14 @@ export async function getHomeData(): Promise<HomeData> {
 async function todayWorkout({
   plans,
   nextPlanId,
+  restDay,
   activeSession,
   lastFinished,
   today,
 }: {
   plans: WorkoutPlan[];
   nextPlanId: number | null;
+  restDay: PlansOverview["restDay"];
   activeSession: ActiveSession | null;
   lastFinished: { id: number; plan_id: number | null; finished_at: string | null } | null;
   today: string;
@@ -140,7 +151,11 @@ async function todayWorkout({
   }
 
   const next = planById(nextPlanId);
-  return next ? { state: "idle", plan: next, activeSession } : { state: "no-plans" };
+  if (next) return { state: "idle", plan: next, activeSession };
+
+  const upcoming = restDay && planById(restDay.planId);
+  if (upcoming && restDay) return { state: "rest", plan: upcoming, weekday: restDay.weekday, activeSession };
+  return { state: "no-plans" };
 }
 
 function weekDay(day: string, today: string): WeekDay {

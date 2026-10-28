@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { StartWorkoutButton } from "@/components/workout/start-workout-button";
 import { formatNumber } from "@/lib/format";
 import type { TodayWorkout } from "@/lib/home";
-import { estimatePlanMinutes } from "@/lib/workout-rules";
+import { estimatePlanMinutes, WEEKDAYS } from "@/lib/workout-rules";
 import type { WorkoutPlan } from "@/lib/workouts";
 import { ContinueWorkoutButton } from "./continue-workout-button";
 
@@ -19,7 +19,11 @@ export function WorkoutCard({ workout, division }: { workout: TodayWorkout; divi
   const plan = workout.plan;
   const code = workout.state === "done" ? workout.summary.planCode : (plan?.code ?? null);
   const subtitle =
-    workout.state === "done" ? workout.summary.title : workout.state === "active" ? workout.session.title : workout.plan.title;
+    workout.state === "done"
+      ? workout.summary.title
+      : workout.state === "active"
+        ? workout.session.title
+        : workout.plan.title;
 
   return (
     <Card variant="accent" className="shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_20px_50px_-20px_oklch(0.9_0.2_128/0.25)]">
@@ -39,12 +43,22 @@ export function WorkoutCard({ workout, division }: { workout: TodayWorkout; divi
         {division.length > 1 && <Label>Divisão {division}</Label>}
       </div>
 
-      <div className="relative mt-4 flex flex-col gap-1.5">
-        <h2 className="font-display text-[32px] leading-none font-semibold">{code ? `Treino ${code}` : "Treino"}</h2>
-        <span className="truncate text-base font-medium text-fg/72">{subtitle}</span>
-      </div>
-
-      {plan && <PlanDetails plan={plan} />}
+      {workout.state === "rest" ? (
+        <div className="relative mt-4 flex flex-col gap-1.5">
+          <h2 className="font-display text-[32px] leading-none font-semibold">Descanso hoje</h2>
+          <span className="truncate text-base font-medium text-fg/72">
+            Próximo: {WEEKDAYS[workout.weekday].name} · Treino {workout.plan.code}, {workout.plan.title}
+          </span>
+        </div>
+      ) : (
+        <>
+          <div className="relative mt-4 flex flex-col gap-1.5">
+            <h2 className="font-display text-[32px] leading-none font-semibold">{code ? `Treino ${code}` : "Treino"}</h2>
+            <span className="truncate text-base font-medium text-fg/72">{subtitle}</span>
+          </div>
+          {plan && <PlanDetails plan={plan} />}
+        </>
+      )}
 
       <div className="relative mt-4">
         {workout.state === "idle" &&
@@ -65,6 +79,17 @@ export function WorkoutCard({ workout, division }: { workout: TodayWorkout; divi
               Adicionar exercícios
             </Link>
           ))}
+        {workout.state === "rest" && workout.plan.exercises.length > 0 && (
+          <StartWorkoutButton
+            planId={workout.plan.id}
+            planCode={workout.plan.code}
+            active={workout.activeSession}
+            size="md"
+            variant="secondary"
+            label="Treinar mesmo assim"
+            className="w-full"
+          />
+        )}
         {workout.state === "active" && workout.session.planId !== null && (
           <ContinueWorkoutButton planId={workout.session.planId} startedAt={workout.session.startedAt} />
         )}
@@ -139,6 +164,9 @@ function FirstPlanCard() {
       </p>
       <Link href="/treinos/nova" className={buttonStyles({ size: "lg", className: "mt-1 w-full" })}>
         Criar primeira ficha
+      </Link>
+      <Link href="/treinos/importar" className={buttonStyles({ variant: "secondary", size: "md", className: "w-full" })}>
+        Importar texto
       </Link>
     </Card>
   );

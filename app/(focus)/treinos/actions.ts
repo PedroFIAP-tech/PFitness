@@ -11,11 +11,14 @@ export type SavePlanInput = {
   /** null cria uma ficha nova */
   planId: number | null;
   title: string;
+  /** 0 = domingo … 6 = sábado; null segue a sequência */
+  weekday: number | null;
   exercises: {
     exerciseId: number;
     targetSets: number;
     targetReps: number;
     restSeconds: number;
+    notes: string | null;
   }[];
 };
 
@@ -35,8 +38,10 @@ export async function savePlan(input: SavePlanInput): Promise<ActionResult> {
       target_sets: item.targetSets,
       target_reps: item.targetReps,
       rest_seconds: item.restSeconds,
+      notes: item.notes?.trim() || null,
     })),
     ...(input.planId !== null && { p_plan_id: input.planId }),
+    ...(input.weekday !== null && { p_weekday: input.weekday }),
   };
 
   let result = await supabase.rpc("save_workout_plan", args);
@@ -81,6 +86,7 @@ function isValidSaveInput(input: SavePlanInput) {
     (input.planId === null || Number.isSafeInteger(input.planId)) &&
     typeof input.title === "string" &&
     input.title.trim().length <= PLAN_LIMITS.titleMaxLength &&
+    (input.weekday === null || inRange(input.weekday, 0, 6)) &&
     Array.isArray(input.exercises) &&
     input.exercises.length <= PLAN_LIMITS.maxExercises &&
     input.exercises.every(
@@ -88,7 +94,9 @@ function isValidSaveInput(input: SavePlanInput) {
         Number.isSafeInteger(item.exerciseId) &&
         inRange(item.targetSets, PLAN_LIMITS.sets.min, PLAN_LIMITS.sets.max) &&
         inRange(item.targetReps, PLAN_LIMITS.reps.min, PLAN_LIMITS.reps.max) &&
-        inRange(item.restSeconds, 0, PLAN_LIMITS.maxRestSeconds),
+        inRange(item.restSeconds, 0, PLAN_LIMITS.maxRestSeconds) &&
+        (item.notes === null ||
+          (typeof item.notes === "string" && item.notes.trim().length <= PLAN_LIMITS.notesMaxLength)),
     )
   );
 }

@@ -8,6 +8,7 @@ import { StartWorkoutButton } from "@/components/workout/start-workout-button";
 import { cn } from "@/lib/cn";
 import { formatNumber, plural } from "@/lib/format";
 import type { ActiveSession } from "@/lib/workout-session";
+import { WEEKDAYS } from "@/lib/workout-rules";
 import type { PlanOverview } from "@/lib/workouts";
 
 type PlanCardProps = {
@@ -22,10 +23,13 @@ export function PlanCard({ plan, isNext, activeSession, open, onToggle }: PlanCa
   const bodyId = useId();
   const totalSets = plan.exercises.reduce((sum, item) => sum + item.targetSets, 0);
   const meta = [
+    plan.weekday !== null ? WEEKDAYS[plan.weekday].short : null,
     plural(plan.exercises.length, "exercício", "exercícios"),
     plural(totalSets, "série", "séries"),
     plan.lastDoneLabel,
-  ].join(" · ");
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <article
@@ -89,7 +93,7 @@ export function PlanCard({ plan, isNext, activeSession, open, onToggle }: PlanCa
               <p className="border-t border-white/6 py-3 text-[13px] text-fg/50">Nenhum exercício ainda.</p>
             ) : (
               <ol>
-                {plan.exercises.map(({ exercise, targetSets, targetReps }, index) => {
+                {plan.exercises.map(({ exercise, targetSets, targetReps, notes }, index) => {
                   const lastLoad = plan.lastLoadKg[exercise.id];
                   return (
                     <li
@@ -101,7 +105,9 @@ export function PlanCard({ plan, isNext, activeSession, open, onToggle }: PlanCa
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5 py-1.5">
                         <span className="truncate text-sm font-medium">{exercise.name}</span>
-                        <span className="text-[11px] text-fg/45">{exercise.muscleGroup}</span>
+                        <span className="truncate text-[11px] text-fg/45">
+                          {notes ? `${exercise.muscleGroup} · ${notes}` : exercise.muscleGroup}
+                        </span>
                       </span>
                       <span className="font-mono text-[13px] font-semibold text-lime">
                         {targetSets}×{targetReps}

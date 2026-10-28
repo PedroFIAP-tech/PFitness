@@ -11,7 +11,8 @@ import { Sheet } from "@/components/ui/sheet";
 import { Stepper } from "@/components/ui/stepper";
 import { useToast } from "@/components/ui/toast";
 import { plural } from "@/lib/format";
-import { estimatePlanMinutes, NEW_EXERCISE_DEFAULTS, PLAN_LIMITS } from "@/lib/workout-rules";
+import { cn } from "@/lib/cn";
+import { estimatePlanMinutes, NEW_EXERCISE_DEFAULTS, PLAN_LIMITS, WEEKDAYS } from "@/lib/workout-rules";
 import type { LibraryExercise, PlanExercise, WorkoutPlan } from "@/lib/workouts";
 import { deletePlan, savePlan } from "./actions";
 import { ExerciseLibrarySheet } from "./exercise-library-sheet";
@@ -37,6 +38,7 @@ export function PlanEditor(props: PlanEditorProps) {
 
 function PlanEditorForm({ plan, code, library, muscleGroups }: PlanEditorProps) {
   const [title, setTitle] = useState(plan?.title ?? "");
+  const [weekday, setWeekday] = useState<number | null>(plan?.weekday ?? null);
   const [items, setItems] = useState<DraftExercise[]>(() =>
     (plan?.exercises ?? []).map((item) => ({ ...item, key: crypto.randomUUID() })),
   );
@@ -58,7 +60,7 @@ function PlanEditorForm({ plan, code, library, muscleGroups }: PlanEditorProps) 
   const selectedIds = useMemo(() => new Set(items.map((item) => item.exercise.id)), [items]);
   const totalSets = items.reduce((sum, item) => sum + item.targetSets, 0);
 
-  const update = (key: string, patch: Partial<Pick<PlanExercise, "targetSets" | "targetReps">>) =>
+  const update = (key: string, patch: Partial<Pick<PlanExercise, "targetSets" | "targetReps" | "notes">>) =>
     setItems((current) => current.map((item) => (item.key === key ? { ...item, ...patch } : item)));
 
   const move = (index: number, offset: -1 | 1) =>
@@ -80,7 +82,10 @@ function PlanEditorForm({ plan, code, library, muscleGroups }: PlanEditorProps) 
       showToast(`Máximo de ${PLAN_LIMITS.maxExercises} exercícios por ficha`, "error");
       return;
     }
-    setItems((current) => [...current, { exercise, ...NEW_EXERCISE_DEFAULTS, key: crypto.randomUUID() }]);
+    setItems((current) => [
+      ...current,
+      { exercise, ...NEW_EXERCISE_DEFAULTS, notes: null, key: crypto.randomUUID() },
+    ]);
     showToast(`${exercise.name} adicionado`);
   };
 
@@ -89,11 +94,13 @@ function PlanEditorForm({ plan, code, library, muscleGroups }: PlanEditorProps) 
       const result = await savePlan({
         planId: plan?.id ?? null,
         title,
-        exercises: items.map(({ exercise, targetSets, targetReps, restSeconds }) => ({
+        weekday,
+        exercises: items.map(({ exercise, targetSets, targetReps, restSeconds, notes }) => ({
           exerciseId: exercise.id,
           targetSets,
           targetReps,
           restSeconds,
+          notes,
         })),
       });
       if (result?.error) showToast(result.error, "error");
@@ -142,6 +149,35 @@ function PlanEditorForm({ plan, code, library, muscleGroups }: PlanEditorProps) 
               onChange={(event) => setTitle(event.target.value)}
               className="h-9 w-full border-b border-white/15 bg-transparent font-display text-xl font-semibold outline-none transition-colors placeholder:text-fg/30 focus:border-lime/60"
             />
+          </div>
+        </div>
+
+        <div role="radiogroup" aria-label="Dia da semana" className="flex flex-col gap-1">
+          <Label className="px-1 text-[9.5px] tracking-[0.16em] text-fg/50">Dia da semana</Label>
+          <div className="grid grid-cols-[1.6fr_repeat(7,minmax(0,1fr))] gap-1">
+            {[null, ...WEEKDAYS.keys()].map((day) => {
+              const selected = day === weekday;
+              return (
+                <button
+                  key={day ?? "none"}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  aria-label={day === null ? "Sem dia fixo" : WEEKDAYS[day].name}
+                  onClick={() => setWeekday(day)}
+                  className="flex h-12 items-center"
+                >
+                  <span
+                    className={cn(
+                      "flex h-9 w-full items-center justify-center rounded-[10px] border font-mono text-xs font-semibold transition-colors duration-200",
+                      selected ? "border-lime/60 bg-lime/14 text-lime" : "border-white/8 bg-white/4 text-fg/65",
+                    )}
+                  >
+                    {day === null ? "Sem dia" : WEEKDAYS[day].initial}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -215,6 +251,15 @@ function PlanEditorForm({ plan, code, library, muscleGroups }: PlanEditorProps) 
                     onChange={(targetReps) => update(item.key, { targetReps })}
                   />
                 </div>
+                <input
+                  value={item.notes ?? ""}
+                  maxLength={PLAN_LIMITS.notesMaxLength}
+                  placeholder="Observação (ex: cada perna)"
+                  aria-label={`Observação de ${item.exercise.name}`}
+                  autoComplete="off"
+                  onChange={(event) => update(item.key, { notes: event.target.value || null })}
+                  className="h-12 w-full rounded-[14px] border border-white/8 bg-white/4 px-3.5 text-base text-fg/85 outline-none transition-colors placeholder:text-fg/35 focus:border-lime/50"
+                />
               </li>
             ))}
           </ol>

@@ -12,7 +12,7 @@ Requisitos: Node 20.9+.
 
 ```bash
 npm install
-cp .env.example .env.local   # preencha com URL e anon key do Supabase
+cp .env.example .env.local   # preencha com URL e anon key do Supabase e a OPENAI_API_KEY
 npm run dev                  # http://localhost:3000
 ```
 
@@ -44,6 +44,7 @@ O schema base está em [`docs/pfitness_schema.sql`](docs/pfitness_schema.sql). A
 | `20261027130000_workout_session.sql` | Treino em andamento: uma sessão ativa por usuário, `start_workout`, `log_set`/`undo_set` (série + PR + pontos juntos), `finish_workout`, `discard_workout` e `exercise_bests_before` |
 | `20261028120000_food_log.sql` | Diário alimentar: `log_food` (registro + 5 pontos), `update_food_log`, `delete_food_log` (estorna os pontos), `food_day_is_open` (só hoje e ontem aceitam mudanças) e `food_id` em `v_food_log_detail` |
 | `20261028140000_home_stats.sql` | Aba Hoje (só leitura): `longest_streak` (recorde, mesma regra da `current_streak`), `activity_days` (treino/alimentação por dia) e `points_by_day` (pontos por dia em America/Sao_Paulo) |
+| `20261028160000_workout_import.sql` | Importar treino por texto: `plan_exercises.notes`, `workout_plans.weekday`, letras únicas só entre fichas ativas, `save_workout_plan` com dia e observação, `import_workout_plans` (exercícios novos + fichas numa transação), `ai_usage` + `claim_ai_usage` (limite diário da IA) |
 
 ## Scripts
 
@@ -67,7 +68,7 @@ SUPABASE_PROJECT_REF=<ref> npm run db:types
 
 1. Suba o repositório no GitHub e importe em [vercel.com/new](https://vercel.com/new). O preset Next.js é detectado sozinho.
 2. Deixe o **Build Command** padrão (`npm run build`). Ele também gera o service worker; trocar por `next build` deixa o PWA sem `sw.js`.
-3. Em **Environment Variables**, adicione `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Production e Preview).
+3. Em **Environment Variables**, adicione `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `OPENAI_API_KEY` (Production e Preview). `AI_MODEL` é opcional.
 4. Faça o deploy e coloque o domínio gerado no Supabase: **Site URL** e **Redirect URLs** (`https://<seu-app>.vercel.app/auth/callback`).
 5. No iPhone: abra o domínio no Safari → Compartilhar → **Adicionar à Tela de Início**.
 
@@ -79,8 +80,8 @@ app/
   (tabs)/                abas com tab bar: hoje (streak, treino do dia, alimentação, pontos),
                          treinos, dieta (diário + sheet de alimento),
                          progresso, perfil
-  (focus)/               telas cheias sem tab bar: nova/editar ficha, treino em andamento,
-                         resumo do treino
+  (focus)/               telas cheias sem tab bar: nova/editar ficha, importar texto,
+                         treino em andamento, resumo do treino
   auth/callback/         destino do link de confirmação de email
   ~offline/              fallback do service worker sem rede
   sw.ts  manifest.ts  icon.svg  apple-icon.png
@@ -91,6 +92,7 @@ components/
   app-shell/             AppShell, TabBar, Screen/ScreenHeader, FocusHeader
   workout/               Iniciar/Continuar (com conflito), pílula do treino, fila de séries
 lib/
+  ai/                    IA no servidor: provedor (OpenAI), schema zod e prompt da importação
   supabase/              clientes browser/server e renovação de sessão do proxy
   auth.ts                usuário e perfil da sessão (getSessionUser, getCurrentProfile)
   profile.ts             ensureProfile: cria perfil e metas no primeiro login
@@ -98,6 +100,7 @@ lib/
   workout-session.ts     treino em andamento e resumo (servidor)
   workout-model.ts       regras do treino: estado, PR, totais (servidor e cliente)
   workout-sync.ts        fila offline das séries (cliente)
+  workout-import.ts      casamento da leitura da IA com a biblioteca (encontrado/parecido/novo)
   home.ts                aba Hoje: tudo buscado em paralelo (servidor)
   diet.ts                dia do diário: itens, meta vigente, catálogo e recentes (servidor)
   diet-model.ts          regras da dieta: refeições, porções, totais, dias abertos (servidor e cliente)
@@ -117,6 +120,9 @@ scripts/                 build do service worker e geração de ícones
 - **Treino em andamento:** o banco é a fonte da verdade das séries concluídas/puladas. Elas passam por uma fila no `localStorage` (`lib/workout-sync.ts`) que reenvia quando a conexão volta; as funções do banco são idempotentes, então reenviar não duplica. Os kg/reps ajustados, o exercício atual e o descanso (guardado como horário de término) também ficam no aparelho, para retomar o treino depois de fechar o app.
 
 - **Dieta:** o dia aberto fica na URL (`/dieta?dia=YYYY-MM-DD`; sem o parâmetro é hoje). Dá para consultar qualquer dia passado, mas só hoje e ontem aceitam adicionar, editar e remover; a regra vale no banco (`food_day_is_open`) e na tela (`isDayOpen`). A dieta funciona só online: sem conexão os botões ficam desligados.
+
+- **Importar treino por texto (IA):** `/treinos/importar` manda o texto (até 8.000 caracteres) para a IA em `lib/ai/`, que devolve JSON validado com zod; o servidor casa cada exercício com a biblioteca por nome normalizado **e** equipamento (`lib/workout-import.ts`). A chave fica só no servidor (`OPENAI_API_KEY`); o provedor e o modelo mudam por `AI_PROVIDER`/`AI_MODEL` (padrão `gpt-6-luna`, ~US$ 0,002 por importação). Cada leitura conta no limite de 10 por usuário por dia (`claim_ai_usage`, a única função `security definer`: o usuário só lê `ai_usage`, então não consegue zerar o próprio limite).
+- **Badge HOJE:** a ficha com o dia da semana de hoje; sem ela, a sequência entre as fichas sem dia; se todas têm dia e nenhuma é hoje, é dia de descanso (a aba Hoje mostra a próxima com "Treinar mesmo assim").
 
 ## Pendências
 

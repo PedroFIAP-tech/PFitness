@@ -11,6 +11,8 @@ export type WorkoutExercise = {
   restSeconds: number;
   targetSets: number;
   targetReps: number;
+  /** Observação da ficha ("cada perna"), exibida abaixo do nome */
+  notes: string | null;
   /** Séries da última sessão concluída (v_exercise_last), em ordem */
   lastSets: { setNumber: number; weightKg: number; reps: number }[];
   /** Melhor carga em treinos anteriores a este (null sem histórico) */

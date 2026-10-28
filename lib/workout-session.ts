@@ -109,7 +109,7 @@ async function loadSessionData(active: ActiveSession, plan: WorkoutPlan): Promis
 
   const toWorkoutExercise = (
     exercise: LibraryExercise,
-    plan: { targetSets: number; targetReps: number; restSeconds: number },
+    plan: { targetSets: number; targetReps: number; restSeconds: number; notes: string | null },
   ): WorkoutExercise => ({
     exerciseId: exercise.id,
     name: exercise.name,
@@ -125,8 +125,8 @@ async function loadSessionData(active: ActiveSession, plan: WorkoutPlan): Promis
   const seen = new Set<number>();
   const exercises = plan.exercises
     .filter(({ exercise }) => !seen.has(exercise.id) && seen.add(exercise.id))
-    .map(({ exercise, targetSets, targetReps, restSeconds }) =>
-      toWorkoutExercise(exercise, { targetSets, targetReps, restSeconds }),
+    .map(({ exercise, targetSets, targetReps, restSeconds, notes }) =>
+      toWorkoutExercise(exercise, { targetSets, targetReps, restSeconds, notes }),
     );
   for (const exercise of extras) {
     exercises.push(
@@ -134,6 +134,7 @@ async function loadSessionData(active: ActiveSession, plan: WorkoutPlan): Promis
         targetSets: 0,
         targetReps: NEW_EXERCISE_DEFAULTS.targetReps,
         restSeconds: NEW_EXERCISE_DEFAULTS.restSeconds,
+        notes: null,
       }),
     );
   }
