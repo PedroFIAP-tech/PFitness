@@ -52,3 +52,36 @@ const monthYearFormat = new Intl.DateTimeFormat("pt-BR", {
 export function formatMonthYear(date: Date): string {
   return monthYearFormat.format(date).replace(".", "").replace(" de ", " ");
 }
+
+/** Valida um dia no formato YYYY-MM-DD (ex.: vindo da URL). */
+export function parseDay(value: unknown): string | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value) ? value : null;
+}
+
+/** Soma dias a um YYYY-MM-DD: shiftDay("2026-10-01", -1) → "2026-09-30". */
+export function shiftDay(day: string, days: number): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Um YYYY-MM-DD como Date, para usar com as funções de formatação acima.
+ * Meio-dia UTC cai no mesmo dia em America/Sao_Paulo.
+ */
+export function dayToDate(day: string): Date {
+  return new Date(`${day}T12:00:00Z`);
+}
+
+const timeFormat = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: APP_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/** Horário em America/Sao_Paulo, ex.: "07:40". */
+export function formatTimeOfDay(date: Date): string {
+  return timeFormat.format(date);
+}

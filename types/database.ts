@@ -547,6 +547,7 @@ export type Database = {
           carbs_g: number | null
           eaten_on: string | null
           fat_g: number | null
+          food_id: number | null
           grams: number | null
           id: number | null
           kcal: number | null
@@ -578,6 +579,17 @@ export type Database = {
         Args: { p_session_id: number }
         Returns: { streak_after: number; streak_before: number }[]
       }
+      delete_food_log: { Args: { p_log_id: number }; Returns: undefined }
+      food_day_is_open: { Args: { p_day: string }; Returns: boolean }
+      log_food: {
+        Args: {
+          p_eaten_on: string
+          p_food_id: number
+          p_grams: number
+          p_meal: Database["public"]["Enums"]["meal_type"]
+        }
+        Returns: number
+      }
       log_set: {
         Args: {
           p_exercise_id: number
@@ -596,6 +608,10 @@ export type Database = {
       start_workout: {
         Args: { p_discard_session_id?: number; p_plan_id: number }
         Returns: number
+      }
+      update_food_log: {
+        Args: { p_grams: number; p_log_id: number }
+        Returns: undefined
       }
       undo_set: {
         Args: { p_exercise_id: number; p_session_id: number; p_set_number: number }

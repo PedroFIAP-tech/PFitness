@@ -8,7 +8,11 @@ import { useIsClient } from "@/lib/use-is-client";
 type SheetProps = {
   open: boolean;
   onClose: () => void;
-  title: string;
+  title: ReactNode;
+  /** Texto pequeno acima do título (ex.: "ADICIONAR AO"). */
+  eyebrow?: ReactNode;
+  /** Botão antes do título (ex.: voltar). */
+  leading?: ReactNode;
   /** Ação no canto do cabeçalho (ex.: "Concluído"). */
   action?: ReactNode;
   /** Conteúdo fixo abaixo do título (busca, filtros). */
@@ -16,10 +20,23 @@ type SheetProps = {
   children: ReactNode;
   /** `tall`: 84% da tela, com rolagem interna (biblioteca). `auto`: altura do conteúdo. */
   size?: "tall" | "auto";
+  /** Muda a cada passo do sheet: o conteúdo entra com animação e a rolagem volta ao topo. */
+  stepKey?: string;
 };
 
 /** Bottom sheet do protótipo: fundo desfocado, alça e subida com mola. */
-export function Sheet({ open, onClose, title, action, header, children, size = "auto" }: SheetProps) {
+export function Sheet({
+  open,
+  onClose,
+  title,
+  eyebrow,
+  leading,
+  action,
+  header,
+  children,
+  size = "auto",
+  stepKey,
+}: SheetProps) {
   const titleId = useId();
   const isClient = useIsClient();
 
@@ -59,14 +76,28 @@ export function Sheet({ open, onClose, title, action, header, children, size = "
         <div className="flex flex-col gap-3 px-4 pt-2.5">
           <span aria-hidden className="h-1.25 w-10 self-center rounded-full bg-white/20" />
           <div className="flex min-h-12 items-center justify-between gap-3">
-            <h2 id={titleId} className="font-display text-xl font-semibold">
-              {title}
-            </h2>
+            {leading}
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              {eyebrow && (
+                <span className="font-mono text-[9.5px] leading-none font-medium tracking-[0.16em] text-fg/50 uppercase">
+                  {eyebrow}
+                </span>
+              )}
+              <h2 id={titleId} className="font-display text-xl leading-tight font-semibold">
+                {title}
+              </h2>
+            </div>
             {action}
           </div>
           {header}
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+16px)]">
+        <div
+          key={stepKey}
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+16px)]",
+            stepKey && "animate-item-in",
+          )}
+        >
           {children}
         </div>
       </div>

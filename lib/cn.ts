@@ -45,6 +45,7 @@ const twMerge = extendTailwindMerge({
         "scan",
         "flame",
         "bump",
+        "bar-x",
       ],
     },
   },
