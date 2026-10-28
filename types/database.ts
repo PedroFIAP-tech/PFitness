@@ -569,6 +569,10 @@ export type Database = {
       }
     }
     Functions: {
+      activity_days: {
+        Args: { p_from: string }
+        Returns: { day: string; food: boolean; workout: boolean }[]
+      }
       current_streak: { Args: { p_user: string }; Returns: number }
       discard_workout: { Args: { p_session_id: number }; Returns: undefined }
       exercise_bests_before: {
@@ -590,6 +594,7 @@ export type Database = {
         }
         Returns: number
       }
+      longest_streak: { Args: { p_user: string }; Returns: number }
       log_set: {
         Args: {
           p_exercise_id: number
@@ -600,6 +605,10 @@ export type Database = {
           p_weight_kg: number
         }
         Returns: { is_pr: boolean; previous_best: number | null; set_id: number }[]
+      }
+      points_by_day: {
+        Args: { p_from: string }
+        Returns: { day: string; points: number }[]
       }
       save_workout_plan: {
         Args: { p_exercises: Json; p_plan_id?: number; p_title: string }

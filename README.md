@@ -43,6 +43,7 @@ O schema base está em [`docs/pfitness_schema.sql`](docs/pfitness_schema.sql). A
 | `20261027120000_save_workout_plan.sql` | Função que salva a ficha e os exercícios dela numa única transação (usada em Salvar ficha) |
 | `20261027130000_workout_session.sql` | Treino em andamento: uma sessão ativa por usuário, `start_workout`, `log_set`/`undo_set` (série + PR + pontos juntos), `finish_workout`, `discard_workout` e `exercise_bests_before` |
 | `20261028120000_food_log.sql` | Diário alimentar: `log_food` (registro + 5 pontos), `update_food_log`, `delete_food_log` (estorna os pontos), `food_day_is_open` (só hoje e ontem aceitam mudanças) e `food_id` em `v_food_log_detail` |
+| `20261028140000_home_stats.sql` | Aba Hoje (só leitura): `longest_streak` (recorde, mesma regra da `current_streak`), `activity_days` (treino/alimentação por dia) e `points_by_day` (pontos por dia em America/Sao_Paulo) |
 
 ## Scripts
 
@@ -75,7 +76,8 @@ SUPABASE_PROJECT_REF=<ref> npm run db:types
 ```
 app/
   (auth)/login/          login e cadastro (server actions em (auth)/actions.ts)
-  (tabs)/                abas com tab bar: hoje, treinos, dieta (diário + sheet de alimento),
+  (tabs)/                abas com tab bar: hoje (streak, treino do dia, alimentação, pontos),
+                         treinos, dieta (diário + sheet de alimento),
                          progresso, perfil
   (focus)/               telas cheias sem tab bar: nova/editar ficha, treino em andamento,
                          resumo do treino
@@ -96,6 +98,7 @@ lib/
   workout-session.ts     treino em andamento e resumo (servidor)
   workout-model.ts       regras do treino: estado, PR, totais (servidor e cliente)
   workout-sync.ts        fila offline das séries (cliente)
+  home.ts                aba Hoje: tudo buscado em paralelo (servidor)
   diet.ts                dia do diário: itens, meta vigente, catálogo e recentes (servidor)
   diet-model.ts          regras da dieta: refeições, porções, totais, dias abertos (servidor e cliente)
   date.ts                datas em America/Sao_Paulo
@@ -118,4 +121,5 @@ scripts/                 build do service worker e geração de ícones
 ## Pendências
 
 - **Travar `point_events` antes da parte de competição.** Hoje o RLS (`own_rows`) deixa o próprio usuário inserir pontos direto pela API. Antes de rankings/competição, revogar `insert`/`update`/`delete` dessa tabela para `authenticated` e gravar pontos só pelas funções (`log_set`, `finish_workout`…), que então passam a ser `security definer` com checagem explícita de `auth.uid()`.
+- **Rever a regra da sequência antes da competição.** Hoje o dia conta com um treino concluído ou com qualquer alimento registrado, então registrar 1 item já mantém a streak. Uma regra mais justa: alimentação só conta com ≥ 70% da meta de kcal do dia. A regra vive em `current_streak` (schema base) e `longest_streak` (`20261028140000_home_stats.sql`), e as duas precisam mudar juntas; `activity_days` usa a mesma definição para a faixa dos 7 dias.
 - **Teto de pontos por alimento antes da competição.** Hoje cada alimento registrado vale +5 sem limite, então dá para farmar pontos com dezenas de itens de 1 g. Antes de rankings, limitar em `log_food` (ex.: pontos só para os 10 primeiros itens do dia) e incluir `food_logs` no travamento acima (`update`/`delete` só pelas funções).

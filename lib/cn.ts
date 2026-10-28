@@ -46,6 +46,8 @@ const twMerge = extendTailwindMerge({
         "flame",
         "bump",
         "bar-x",
+        "ring",
+        "bar-y",
       ],
     },
   },

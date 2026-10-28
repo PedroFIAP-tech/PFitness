@@ -19,6 +19,8 @@ type StartWorkoutButtonProps = {
   /** Treino em andamento (de qualquer ficha), se houver */
   active: ActiveSession | null;
   size?: ButtonSize;
+  /** Texto do botão (padrão "Iniciar") */
+  label?: string;
   className?: string;
 };
 
@@ -26,7 +28,14 @@ type StartWorkoutButtonProps = {
  * Iniciar/Continuar treino. Se houver um treino de outra ficha em andamento,
  * pergunta se quer continuar aquele ou descartá-lo e começar este.
  */
-export function StartWorkoutButton({ planId, planCode, active, size = "sm", className }: StartWorkoutButtonProps) {
+export function StartWorkoutButton({
+  planId,
+  planCode,
+  active,
+  size = "sm",
+  label = "Iniciar",
+  className,
+}: StartWorkoutButtonProps) {
   const [conflict, setConflict] = useState<ActiveSession | null>(null);
   const [pending, startTransition] = useTransition();
   const [toast, showToast] = useToast();
@@ -60,7 +69,7 @@ export function StartWorkoutButton({ planId, planCode, active, size = "sm", clas
         className={className}
       >
         {!pending && <PlayIcon className="h-3.25 w-2.75" />}
-        Iniciar
+        {label}
       </Button>
 
       <Sheet

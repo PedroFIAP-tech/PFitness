@@ -20,6 +20,8 @@ const RECENT_LIMIT = 8;
 /** Registros lidos para achar os recentes (alimentos repetidos contam uma vez). */
 const RECENT_SCAN = 80;
 
+const GOALS_SELECT = "kcal, protein_g, carbs_g, fat_g, valid_from";
+
 /** Fallback se o usuário ainda não tem metas (ensureProfile cria as iniciais). */
 const FALLBACK_GOALS: Nutrients = { kcal: 2300, protein: 150, carbs: 270, fat: 70 };
 
@@ -41,7 +43,7 @@ export async function getDiaryDay(day: string): Promise<DiaryDay> {
       .order("id"),
     supabase
       .from("daily_goals")
-      .select("kcal, protein_g, carbs_g, fat_g, valid_from")
+      .select(GOALS_SELECT)
       .eq("user_id", user.id)
       .order("valid_from", { ascending: false }),
     supabase
@@ -59,12 +61,7 @@ export async function getDiaryDay(day: string): Promise<DiaryDay> {
   if (foodsResult.error) throw foodsResult.error;
   if (recentResult.error) throw recentResult.error;
 
-  // Meta vigente: a de valid_from mais recente até o dia. Dias antes da primeira meta usam a mais antiga.
-  const goalsRow =
-    goalsResult.data.find((row) => row.valid_from <= day) ?? goalsResult.data.at(-1);
-  const goals = goalsRow
-    ? { kcal: goalsRow.kcal, protein: goalsRow.protein_g, carbs: goalsRow.carbs_g, fat: goalsRow.fat_g }
-    : FALLBACK_GOALS;
+  const goals = goalsForDay(goalsResult.data, day);
 
   const items = itemsResult.data.flatMap((row): DiaryItem[] =>
     row.id === null || row.food_id === null || row.meal === null
@@ -94,6 +91,45 @@ export async function getDiaryDay(day: string): Promise<DiaryDay> {
   const recentFoodIds = [...new Set(recentResult.data.map((row) => row.food_id))].slice(0, RECENT_LIMIT);
 
   return { day, goals, items, foods, recentFoodIds };
+}
+
+/** Totais consumidos e meta vigente de um dia (card de alimentação da aba Hoje). */
+export async function getDayNutrition(day: string): Promise<{ totals: Nutrients; goals: Nutrients }> {
+  const [supabase, user] = await Promise.all([createClient(), getSessionUser()]);
+  const [totalsResult, goalsResult] = await Promise.all([
+    supabase
+      .from("v_daily_nutrition")
+      .select("kcal, protein_g, carbs_g, fat_g")
+      .eq("user_id", user.id)
+      .eq("eaten_on", day)
+      .maybeSingle(),
+    supabase.from("daily_goals").select(GOALS_SELECT).eq("user_id", user.id).order("valid_from", { ascending: false }),
+  ]);
+  if (totalsResult.error) throw totalsResult.error;
+  if (goalsResult.error) throw goalsResult.error;
+
+  const row = totalsResult.data;
+  return {
+    totals: {
+      kcal: Number(row?.kcal ?? 0),
+      protein: Number(row?.protein_g ?? 0),
+      carbs: Number(row?.carbs_g ?? 0),
+      fat: Number(row?.fat_g ?? 0),
+    },
+    goals: goalsForDay(goalsResult.data, day),
+  };
+}
+
+/**
+ * Meta vigente no dia: a de valid_from mais recente até ele. Dias antes da
+ * primeira meta usam a mais antiga. `rows` vem de valid_from desc.
+ */
+function goalsForDay(
+  rows: Pick<Tables<"daily_goals">, "kcal" | "protein_g" | "carbs_g" | "fat_g" | "valid_from">[],
+  day: string,
+): Nutrients {
+  const row = rows.find((goal) => goal.valid_from <= day) ?? rows.at(-1);
+  return row ? { kcal: row.kcal, protein: row.protein_g, carbs: row.carbs_g, fat: row.fat_g } : FALLBACK_GOALS;
 }
 
 export function toFood(row: FoodRow): Food {

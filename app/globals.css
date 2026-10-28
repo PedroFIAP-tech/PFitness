@@ -71,6 +71,9 @@
   --animate-bump: bump 0.6s var(--ease-snap);
   /* Barras da dieta crescendo da esquerda ao abrir */
   --animate-bar-x: bar-x 1.2s var(--ease-snap) backwards;
+  /* Aba Hoje: anéis/gauge enchendo e barras de pontos subindo */
+  --animate-ring: ring 1.4s var(--ease-snap) backwards;
+  --animate-bar-y: bar-y 0.8s var(--ease-snap) backwards;
 
   @keyframes screen-in {
     from {
@@ -271,6 +274,19 @@
 @keyframes bar-x {
   from {
     transform: scaleX(0);
+  }
+}
+
+/* Os paths usam pathLength=100: o traço sai de vazio até o valor final */
+@keyframes ring {
+  from {
+    stroke-dashoffset: 100;
+  }
+}
+
+@keyframes bar-y {
+  from {
+    transform: scaleY(0);
   }
 }
 
