@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/cn";
 import { formatNumber } from "@/lib/format";
-import { IMPORT_DAILY_LIMIT, IMPORT_TEXT_MAX_LENGTH } from "@/lib/workout-import";
+import { IMPORT_TEXT_MAX_LENGTH } from "@/lib/workout-import";
 
 const PLACEHOLDER = `Segunda – Costas
  • Remada baixa — 3x12
@@ -30,12 +30,13 @@ type PasteStepProps = {
   onText: (text: string) => void;
   reading: boolean;
   remaining: number;
+  dailyLimit: number;
   error: { message: string; retry: boolean } | null;
   onRead: () => void;
 };
 
 /** Passo 1: colar o texto e mandar para a IA. */
-export function PasteStep({ text, onText, reading, remaining, error, onRead }: PasteStepProps) {
+export function PasteStep({ text, onText, reading, remaining, dailyLimit, error, onRead }: PasteStepProps) {
   const length = text.trim().length;
   const tooLong = length > IMPORT_TEXT_MAX_LENGTH;
 
@@ -86,7 +87,7 @@ export function PasteStep({ text, onText, reading, remaining, error, onRead }: P
         <Label className={remaining === 0 ? "text-amber" : undefined}>
           {remaining === 0
             ? "Importações de hoje esgotadas"
-            : `${remaining} de ${IMPORT_DAILY_LIMIT} importações restantes hoje`}
+            : `${remaining} de ${dailyLimit} importações restantes hoje`}
         </Label>
         <p className="text-xs text-fg/45">
           O texto é enviado à OpenAI só para esta leitura.

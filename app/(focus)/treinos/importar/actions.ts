@@ -3,11 +3,10 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { AiError, parseWorkoutText } from "@/lib/ai";
+import { AiError, getAiDailyLimit, isAiConfigured, parseWorkoutText } from "@/lib/ai";
 import { getSessionUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import {
-  IMPORT_DAILY_LIMIT,
   IMPORT_TEXT_MAX_LENGTH,
   NEW_EXERCISE_NAME_MAX_LENGTH,
   matchImport,
@@ -29,16 +28,17 @@ export async function readWorkoutText(text: string): Promise<ReadResult> {
     return { error: `O texto passa de ${IMPORT_TEXT_MAX_LENGTH.toLocaleString("pt-BR")} caracteres.`, retry: false };
   }
   // Sem a chave nem gasta uma leitura do dia
-  if (!process.env.OPENAI_API_KEY?.trim() && (process.env.AI_PROVIDER?.trim() || "openai") === "openai") {
+  if (!isAiConfigured()) {
     return { error: "A importação por IA não está configurada neste servidor.", retry: false };
   }
 
+  const dailyLimit = getAiDailyLimit();
   const supabase = await createClient();
-  const claim = await supabase.rpc("claim_ai_usage", { p_kind: "workout_import", p_daily_limit: IMPORT_DAILY_LIMIT });
+  const claim = await supabase.rpc("claim_ai_usage", { p_kind: "workout_import", p_daily_limit: dailyLimit });
   if (claim.error) {
     if (claim.error.code === "PF030") {
       return {
-        error: `Você já usou as ${IMPORT_DAILY_LIMIT} importações de hoje. Amanhã tem mais!`,
+        error: `Você já usou as ${dailyLimit} importações de hoje. Amanhã tem mais!`,
         retry: false,
         remaining: 0,
       };

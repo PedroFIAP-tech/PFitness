@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { FocusHeader } from "@/components/app-shell/focus-header";
+import { getAiDailyLimit } from "@/lib/ai";
 import { getSessionUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { IMPORT_DAILY_LIMIT } from "@/lib/workout-import";
 import { getActiveSession } from "@/lib/workout-session";
 import { getExerciseLibrary } from "@/lib/workouts";
 import { ImportScreen } from "./import-screen";
@@ -28,6 +28,7 @@ async function ImportLoader() {
   ]);
   if (plansResult.error) throw plansResult.error;
   if (usageResult.error) throw usageResult.error;
+  const dailyLimit = getAiDailyLimit();
 
   return (
     <ImportScreen
@@ -35,7 +36,8 @@ async function ImportLoader() {
       muscleGroups={library.muscleGroups}
       activeCodes={plansResult.data.map((plan) => plan.code)}
       hasActiveSession={activeSession !== null}
-      remainingToday={Math.max(0, IMPORT_DAILY_LIMIT - usageResult.data)}
+      dailyLimit={dailyLimit}
+      remainingToday={Math.max(0, dailyLimit - usageResult.data)}
     />
   );
 }

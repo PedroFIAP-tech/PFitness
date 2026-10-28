@@ -23,6 +23,8 @@ type ImportScreenProps = {
   activeCodes: string[];
   /** Treino em andamento bloqueia "Substituir" */
   hasActiveSession: boolean;
+  /** Leituras por dia (AI_DAILY_LIMIT, lido no servidor) */
+  dailyLimit: number;
   remainingToday: number;
 };
 
@@ -39,7 +41,14 @@ export function ImportScreen(props: ImportScreenProps) {
   return <ImportFlow key={bfcacheId} {...props} />;
 }
 
-function ImportFlow({ library, muscleGroups, activeCodes, hasActiveSession, remainingToday }: ImportScreenProps) {
+function ImportFlow({
+  library,
+  muscleGroups,
+  activeCodes,
+  hasActiveSession,
+  dailyLimit,
+  remainingToday,
+}: ImportScreenProps) {
   const [text, setText] = useState("");
   const [plans, setPlans] = useState<ImportPlan[] | null>(null);
   const [remaining, setRemaining] = useState(remainingToday);
@@ -60,9 +69,10 @@ function ImportFlow({ library, muscleGroups, activeCodes, hasActiveSession, rema
     [],
   );
 
-  const read = () =>
+  const read = () => {
+    // Fora da transition: o erro anterior some já, e não só quando a leitura terminar
+    setReadError(null);
     startReading(async () => {
-      setReadError(null);
       const result = await readWorkoutText(text);
       if (result.remaining !== undefined) setRemaining(result.remaining);
       if ("error" in result) {
@@ -73,6 +83,7 @@ function ImportFlow({ library, muscleGroups, activeCodes, hasActiveSession, rema
       setMode("add");
       window.scrollTo({ top: 0 });
     });
+  };
 
   const updatePlan = (planKey: string, update: (plan: ImportPlan) => ImportPlan | null) =>
     setPlans((current) =>
@@ -116,6 +127,7 @@ function ImportFlow({ library, muscleGroups, activeCodes, hasActiveSession, rema
           onText={setText}
           reading={reading}
           remaining={remaining}
+          dailyLimit={dailyLimit}
           error={readError}
           onRead={read}
         />

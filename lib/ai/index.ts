@@ -1,5 +1,7 @@
 import "server-only";
+import { getAiProviderName } from "./config";
 import { AiError } from "./errors";
+import { createMockProvider } from "./mock";
 import { createOpenAIProvider } from "./openai";
 import type { StructuredProvider } from "./types";
 import {
@@ -9,18 +11,23 @@ import {
   type ParsedWorkout,
 } from "./workout-schema";
 
+export { getAiDailyLimit, isAiConfigured } from "./config";
 export { AiError, type AiErrorCode } from "./errors";
 
 /**
  * Provedor configurado por variáveis de ambiente (só no servidor):
- * AI_PROVIDER (padrão "openai"), AI_MODEL e AI_REASONING_EFFORT (opcionais) e
- * OPENAI_API_KEY.
+ * AI_PROVIDER ("openai" por padrão, ou "mock" nos testes), AI_MODEL e
+ * AI_REASONING_EFFORT (opcionais), OPENAI_API_KEY e AI_MOCK_DELAY_MS (mock).
  */
 function getProvider(): StructuredProvider {
-  const provider = process.env.AI_PROVIDER?.trim() || "openai";
+  const provider = getAiProviderName();
   const model = process.env.AI_MODEL?.trim() || undefined;
 
   switch (provider) {
+    case "mock": {
+      const delay = Number(process.env.AI_MOCK_DELAY_MS);
+      return createMockProvider(Number.isFinite(delay) && delay >= 0 ? delay : undefined);
+    }
     case "openai": {
       const apiKey = process.env.OPENAI_API_KEY?.trim();
       if (!apiKey) throw new AiError("not_configured", "OPENAI_API_KEY ausente");

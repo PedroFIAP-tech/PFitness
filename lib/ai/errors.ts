@@ -7,12 +7,11 @@ export type AiErrorCode =
   | "unavailable";
 
 export class AiError extends Error {
-  constructor(
-    readonly code: AiErrorCode,
-    message: string,
-    options?: { cause?: unknown },
-  ) {
+  readonly code: AiErrorCode;
+
+  constructor(code: AiErrorCode, message: string, options?: { cause?: unknown }) {
     super(message, options);
     this.name = "AiError";
+    this.code = code;
   }
 }

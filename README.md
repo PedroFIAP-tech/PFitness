@@ -55,7 +55,8 @@ O schema base está em [`docs/pfitness_schema.sql`](docs/pfitness_schema.sql). A
 | `npm run build` | `next build` e depois gera `public/sw.js` (`scripts/build-sw.mjs`) |
 | `npm start` | Serve o build de produção |
 | `npm run lint` / `npm run typecheck` | ESLint / TypeScript |
-| `npm test` | Testes de `lib/**/*.test.ts` com `node:test` (Node 22.18+ roda TypeScript direto) |
+| `npm test` | Testes de `lib/**/*.test.ts` com `node:test` (Node 22.18+ roda TypeScript direto), com a IA em modo mock |
+| `npm run ai:record-fixture` | Regrava a resposta real da IA para o texto de exemplo (**chama a OpenAI**; rode só quando o prompt ou o schema mudarem) |
 | `npm run icons` | Regenera os PNGs do PWA a partir de `app/icon.svg` |
 | `npm run db:types` | Regenera `types/database.ts` a partir do banco (veja abaixo) |
 
@@ -126,7 +127,8 @@ scripts/                 build do service worker e geração de ícones
 
 - **Dieta:** o dia aberto fica na URL (`/dieta?dia=YYYY-MM-DD`; sem o parâmetro é hoje). Dá para consultar qualquer dia passado, mas só hoje e ontem aceitam adicionar, editar e remover; a regra vale no banco (`food_day_is_open`) e na tela (`isDayOpen`). A dieta funciona só online: sem conexão os botões ficam desligados.
 
-- **Importar treino por texto (IA):** `/treinos/importar` manda o texto (até 8.000 caracteres) para a IA em `lib/ai/`, que devolve JSON validado com zod; o servidor casa cada exercício com a biblioteca por nome normalizado **e** equipamento (`lib/workout-import.ts`). A chave fica só no servidor (`OPENAI_API_KEY`); o provedor e o modelo mudam por `AI_PROVIDER`/`AI_MODEL` (padrão `gpt-6-luna`, ~US$ 0,002 por importação). O raciocínio do modelo fica desligado (`AI_REASONING_EFFORT=none`): para extrair texto não muda o resultado e a leitura cai de ~20 s para ~7 s. Cada leitura conta no limite de 10 por usuário por dia (`claim_ai_usage`, a única função `security definer`: o usuário só lê `ai_usage`, então não consegue zerar o próprio limite).
+- **Importar treino por texto (IA):** `/treinos/importar` manda o texto (até 8.000 caracteres) para a IA em `lib/ai/`, que devolve JSON validado com zod; o servidor casa cada exercício com a biblioteca por nome normalizado **e** equipamento (`lib/workout-import.ts`). A chave fica só no servidor (`OPENAI_API_KEY`); o provedor e o modelo mudam por `AI_PROVIDER`/`AI_MODEL` (padrão `gpt-6-luna`, ~US$ 0,002 por importação). O raciocínio do modelo fica desligado (`AI_REASONING_EFFORT=none`): para extrair texto não muda o resultado e a leitura cai de ~20 s para ~7 s. Cada leitura conta no limite diário por usuário, `AI_DAILY_LIMIT` (padrão 10, de 1 a 100), controlado por `claim_ai_usage` (a única função `security definer`: o usuário só lê `ai_usage`, então não consegue zerar o próprio limite).
+- **IA nos testes:** testes automáticos e de interface **não chamam a OpenAI**. Com `AI_PROVIDER=mock`, `lib/ai/mock.ts` devolve a resposta real gravada em `lib/ai/fixtures/workout-import-example.ts` (lida a partir de `workout-import-example.txt`). Marcadores no texto simulam falhas: `[mock:invalid]`, `[mock:unavailable]`, `[mock:empty]`; `AI_MOCK_DELAY_MS` controla a espera (padrão 800 ms). Para testar a interface: `AI_PROVIDER=mock npm start`. O `npm test` já liga o mock. A API real só é chamada pelo app em uso normal e por `npm run ai:record-fixture`.
 - **Badge HOJE:** a ficha com o dia da semana de hoje; sem ela, a sequência entre as fichas sem dia; se todas têm dia e nenhuma é hoje, é dia de descanso (a aba Hoje mostra a próxima com "Treinar mesmo assim").
 
 - **Onboarding e metas:** no primeiro acesso (`profiles.onboarded_at` nulo) a aba Hoje manda para `/onboarding`; o Perfil tem "Refazer onboarding". As metas são calculadas em `lib/nutrition-calc.ts`, sem IA:

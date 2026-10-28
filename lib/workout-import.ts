@@ -8,8 +8,6 @@ import type { LibraryExercise } from "@/lib/workouts";
 
 /** Limite do texto colado (caracteres). */
 export const IMPORT_TEXT_MAX_LENGTH = 8000;
-/** Leituras por usuário por dia (claim_ai_usage). */
-export const IMPORT_DAILY_LIMIT = 10;
 export const NEW_EXERCISE_NAME_MAX_LENGTH = 60;
 
 /**

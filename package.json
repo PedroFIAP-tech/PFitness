@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \"lib/**/*.test.ts\"",
+    "test": "AI_PROVIDER=mock AI_MOCK_DELAY_MS=0 node --import ./scripts/test-loader.mjs --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"lib/**/*.test.ts\"",
+    "ai:record-fixture": "node --env-file=.env.local --import ./scripts/test-loader.mjs --conditions=react-server --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/record-ai-fixture.ts",
     "icons": "node scripts/generate-icons.mjs",
     "db:types": "npx --yes supabase gen types typescript --project-id \"$SUPABASE_PROJECT_REF\" --schema public > types/database.ts"
   },
