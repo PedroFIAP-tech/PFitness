@@ -647,6 +647,17 @@ export type Database = {
         Args: { p_plans: Json; p_replace?: boolean }
         Returns: number[]
       }
+      load_progress: {
+        Args: { p_from: string }
+        Returns: {
+          best_e1rm: number
+          exercise_id: number
+          max_kg: number
+          name: string
+          sets: number
+          week_start: string
+        }[]
+      }
       log_food: {
         Args: {
           p_eaten_on: string
@@ -668,6 +679,10 @@ export type Database = {
           p_weight_kg: number
         }
         Returns: { is_pr: boolean; previous_best: number | null; set_id: number }[]
+      }
+      muscle_volume: {
+        Args: { p_from: string }
+        Returns: { muscle_group: string; sets: number; volume_kg: number }[]
       }
       points_by_day: {
         Args: { p_from: string }
@@ -711,6 +726,17 @@ export type Database = {
       sync_achievements: {
         Args: never
         Returns: { achievement_id: string; progress: number; target: number; unlocked_at: string | null }[]
+      }
+      training_calendar: {
+        Args: { p_from: string }
+        Returns: {
+          day: string
+          duration_s: number
+          food: boolean
+          plans: string | null
+          sessions: number
+          volume_kg: number
+        }[]
       }
       undo_set: {
         Args: { p_exercise_id: number; p_session_id: number; p_set_number: number }

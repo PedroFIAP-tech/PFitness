@@ -74,6 +74,8 @@
   /* Aba Hoje: anéis/gauge enchendo e barras de pontos subindo */
   --animate-ring: ring 1.4s var(--ease-snap) backwards;
   --animate-bar-y: bar-y 0.8s var(--ease-snap) backwards;
+  /* Progresso: linha do gráfico se desenhando (path com pathLength=1) */
+  --animate-draw: draw 1.5s cubic-bezier(0.3, 0.7, 0.2, 1) both;
 
   @keyframes screen-in {
     from {
@@ -287,6 +289,15 @@
 @keyframes bar-y {
   from {
     transform: scaleY(0);
+  }
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
   }
 }
 

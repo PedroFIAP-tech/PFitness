@@ -48,6 +48,7 @@ const twMerge = extendTailwindMerge({
         "bar-x",
         "ring",
         "bar-y",
+        "draw",
       ],
     },
   },

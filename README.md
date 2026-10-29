@@ -4,7 +4,7 @@ PWA mobile-first de treino, alimentação e gamificação.
 
 **Stack:** Next.js 16 (App Router, Cache Components) · TypeScript · Tailwind CSS 4 · Supabase (Auth + Postgres) · Serwist (service worker).
 
-Referências de design e banco ficam em [`docs/`](docs/): protótipo navegável (`PFitness.html`), telas em PDF e o schema (`pfitness_schema.sql`, já aplicado no Supabase).
+Referências de design e banco ficam em [`docs/`](docs/): [`design-notes.md`](docs/design-notes.md) (tokens, componentes, animações e as telas a construir; é a fonte de design daqui para frente), o protótipo original (`PFitness.html`), telas em PDF e o schema (`pfitness_schema.sql`, já aplicado no Supabase).
 
 ## Rodar local
 
@@ -46,6 +46,7 @@ O schema base está em [`docs/pfitness_schema.sql`](docs/pfitness_schema.sql). A
 | `20261028140000_home_stats.sql` | Aba Hoje (só leitura): `longest_streak` (recorde, mesma regra da `current_streak`), `activity_days` (treino/alimentação por dia) e `points_by_day` (pontos por dia em America/Sao_Paulo) |
 | `20261028160000_workout_import.sql` | Importar treino por texto: `plan_exercises.notes`, `workout_plans.weekday`, letras únicas só entre fichas ativas, `save_workout_plan` com dia e observação, `import_workout_plans` (exercícios novos + fichas numa transação), `ai_usage` + `claim_ai_usage` (limite diário da IA) |
 | `20261029120000_profile_onboarding.sql` | Perfil e onboarding: `lanche_manha` em `meal_type`, colunas de rotina/treinos/refeições/restrições em `profiles`, `daily_goals.source`, `save_onboarding`, `log_weight`, `set_daily_goals` e `sync_achievements` (progresso e desbloqueio das conquistas) |
+| `20261029140000_progress.sql` | Aba Progresso (só leitura): `load_progress` (carga máxima e 1RM estimado por exercício e semana), `training_calendar` (volume, treinos, duração e alimentação por dia) e `muscle_volume` (volume por grupo muscular) |
 
 ## Scripts
 
@@ -82,7 +83,7 @@ app/
   (auth)/login/          login e cadastro (server actions em (auth)/actions.ts)
   (tabs)/                abas com tab bar: hoje (streak, treino do dia, alimentação, pontos),
                          treinos, dieta (diário + sheet de alimento),
-                         progresso, perfil
+                         progresso (mês, peso, carga, volume por grupo, calendário), perfil
   (focus)/               telas cheias sem tab bar: onboarding, nova/editar ficha, importar
                          texto, treino em andamento, resumo do treino
   auth/callback/         destino do link de confirmação de email
@@ -107,6 +108,8 @@ lib/
   home.ts                aba Hoje: tudo buscado em paralelo (servidor)
   diet.ts                dia do diário: itens, meta vigente, catálogo e recentes (servidor)
   diet-model.ts          regras da dieta: refeições, porções, totais, dias abertos (servidor e cliente)
+  progress.ts            aba Progresso: tudo buscado em paralelo (servidor)
+  progress-model.ts      escalas dos gráficos, tendência, barras, calendário (servidor e cliente)
   nutrition-calc.ts      metas calculadas (Mifflin-St Jeor) e meta adaptativa, com testes
   profile-data.ts        aba Perfil e valores do onboarding (servidor)
   profile-model.ts       opções e limites do onboarding/Perfil (servidor e cliente)
@@ -145,6 +148,7 @@ scripts/                 build do service worker e geração de ícones
   - Proteína 2,0 g/kg (2,2 para perder gordura), gordura 0,9 g/kg, carbo com o restante (mínimo 50 g).
   - Metas e peso são gravados com a data de hoje (`daily_goals`/`weight_logs`, um registro por dia); os dias anteriores ficam no histórico. `daily_goals.source` diz se a meta é padrão, calculada ou personalizada.
 - **Meta adaptativa:** com ≥ 4 pesagens em ≥ 14 dias nas últimas 3 semanas (descartando as que diferem mais de 3 kg das vizinhas), a tendência do peso é comparada ao esperado (+0,25 kg/sem para massa, −0,5% do peso/sem para perder, 0 para manter, tolerância ±0,15). Fora da tolerância, o Perfil sugere ±100–200 kcal; "Ignorar" esconde por 7 dias.
+- **Progresso:** o dia de um treino é o dia (America/Sao_Paulo) em que ele foi concluído. Carga semanal de segunda a domingo, por maior carga ou 1RM estimado (Epley: kg × (1 + reps/30)); o calendário pinta cada dia pelo volume relativo ao maior dia do período (quartis) e marca dias só com alimentação; a linha tracejada do peso é a mesma regressão da meta adaptativa (`weightRegression`). Medidas e fórmulas da tela em `docs/design-notes.md`.
 - **Refeições:** `profiles.meal_plan` guarda as refeições escolhidas e os horários; a Dieta mostra só elas, na ordem do usuário, com a meta de cada uma (pesos: almoço e jantar 3, café 2, lanches e ceia 1).
 
 ## Pendências

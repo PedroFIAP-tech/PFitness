@@ -20,7 +20,8 @@ export async function logWeight(weightKg: number): Promise<Result> {
     console.error("logWeight", error);
     return { error: "Não foi possível registrar o peso." };
   }
-  revalidatePath("/perfil");
+  // Perfil e Progresso mostram o peso
+  revalidatePath("/", "layout");
 }
 
 /** Troca o objetivo (as metas só mudam se o usuário aplicar o recálculo). */

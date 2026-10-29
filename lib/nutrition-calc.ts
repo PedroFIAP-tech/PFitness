@@ -185,10 +185,16 @@ export function dropWeightOutliers(points: WeightPoint[], outlierKg: number = AD
   });
 }
 
-/** Inclinação por mínimos quadrados, em kg por semana. */
-export function weightTrendKgPerWeek(points: WeightPoint[]): number {
-  const xs = points.map((point) => dayNumber(point.day));
-  const ys = points.map((point) => point.kg);
+/**
+ * Reta de mínimos quadrados dos pesos pelo dia: kg = intercept + slope·(dia − primeiro dia).
+ * É a regressão da meta adaptativa e da linha de tendência do Progresso.
+ */
+export function weightRegression(points: WeightPoint[]): { slopePerDay: number; intercept: number; firstDay: string } | null {
+  if (points.length === 0) return null;
+  const sorted = [...points].sort((a, b) => a.day.localeCompare(b.day));
+  const origin = dayNumber(sorted[0].day);
+  const xs = sorted.map((point) => dayNumber(point.day) - origin);
+  const ys = sorted.map((point) => point.kg);
   const meanX = xs.reduce((sum, x) => sum + x, 0) / xs.length;
   const meanY = ys.reduce((sum, y) => sum + y, 0) / ys.length;
   let numerator = 0;
@@ -197,7 +203,13 @@ export function weightTrendKgPerWeek(points: WeightPoint[]): number {
     numerator += (xs[i] - meanX) * (ys[i] - meanY);
     denominator += (xs[i] - meanX) ** 2;
   }
-  return denominator === 0 ? 0 : (numerator / denominator) * 7;
+  const slopePerDay = denominator === 0 ? 0 : numerator / denominator;
+  return { slopePerDay, intercept: meanY - slopePerDay * meanX, firstDay: sorted[0].day };
+}
+
+/** Inclinação por mínimos quadrados, em kg por semana. */
+export function weightTrendKgPerWeek(points: WeightPoint[]): number {
+  return (weightRegression(points)?.slopePerDay ?? 0) * 7;
 }
 
 /**
