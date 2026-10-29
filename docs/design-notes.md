@@ -88,6 +88,7 @@ Fonte única de design do app daqui para frente. Tudo aqui foi extraído do prot
 | **Barras de progresso** | Macro: 6px, raio 3. Kcal: 12px, **segmentada** (`repeating-linear-gradient(90deg, transparent 0 10px, #0a0d10 10px 12px)` por cima). XP: 8px, segmentos de 18px. Crescem com `bar-x`. |
 | **Anéis e gauge** | Paths SVG com `pathLength=100`, `stroke-dasharray:100` e `dashoffset = 100 − %`. Enchem com `ring` (1,4 s). Traço do fundo `white/7`. Gauge da Hoje: arco de 280×156 com marcas tracejadas (`.25 4.75`). |
 | **Hexágono** (selos) | `clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)`, com duas camadas: borda em gradiente lime e miolo `radial(lime/28 → #0a0d10)`. Bloqueado: `white/10` e texto `fg/35`. |
+| **Medalha 3D** (`components/achievements`) | No sheet de detalhe da conquista, o hexágono vira uma peça metálica em CSS 3D (`perspective 700px`, `preserve-3d`, sem Three.js). **Frente** = o selo idêntico; **verso** = o mesmo hexágono com o nome (Chakra 15px/700); **espessura** de 12px com 11 camadas de hexágono empilhadas (lime metálico escuro; bloqueada: cinza). De frente e parada fica igual ao selo plano. Ao girar: faixa especular (`white/45`, `skewX(-20deg)`) cruzando a face perto de 12° e borda com um segundo gradiente (20deg) aparecendo conforme o ângulo. Bloqueada: sem reflexo nem brilho. Embaixo, "ARRASTE PARA GIRAR" (mono 9,5px `fg/35`) e, no iOS, o botão "ATIVAR MOVIMENTO" (permissão do giroscópio). |
 | **Chama** (streak) | Gota com `border-radius: 50% 0 50% 50%`, `linear-gradient(45deg, #FFD66B, #FF9A2E 55%, #FF5A1F)`, glow laranja e núcleo `#FFF2C2` animado ao contrário. |
 
 ---
@@ -115,6 +116,12 @@ Fonte única de design do app daqui para frente. Tudo aqui foi extraído do prot
 | `pfToast` | `animate-toast-in` | Toast |
 | `pfScan` | `animate-scan` | Varredura (leitura da IA) |
 
+- **Medalha 3D** (`lib/medal-motion.ts`, loop de `requestAnimationFrame` escrevendo só `transform`/`opacity`, sem render do React):
+  - **arrastar** gira no eixo Y (0,5°/px); ao soltar, continua com inércia (atrito exponencial) e uma mola leva até a face mais próxima (frente ou verso);
+  - **toque duplo** volta para a frente;
+  - **desbloqueio:** a peça cresce e entra girando 3 voltas, desacelera (1,7s, ease-out forte) e para de frente com flash radial lime/branco e anel saindo;
+  - **inclinar o celular** inclina a peça até 8° e move o reflexo (DeviceOrientation);
+  - **`prefers-reduced-motion`:** sem entrada girando (só o flash em fade), sem inércia e sem inclinação; o arraste continua.
 - **Easing padrão:** `ease-snap` = `cubic-bezier(.2,.8,.2,1)`. Sheets usam `cubic-bezier(.2,.9,.2,1)`.
 - **Ao pressionar:** `scale(.9–.98)` em 0,15s (`active:scale-…`).
 - **Contagem de entrada:** os números grandes de cada tela contam de 0 ao valor ao abrir (`CountUp`/`useTween`). Com as abas preservadas (Activity), isso repete ao voltar para a aba.
@@ -151,10 +158,10 @@ Fonte única de design do app daqui para frente. Tudo aqui foi extraído do prot
 | 04 Treino em andamento | `app/(focus)/treino/[planId]` | Topo com tempo / volume / séries, barra de progresso por exercício, roletas de kg e reps, linhas de série com arrastar (→ concluir, ← pular) e partículas. |
 | 05 Descanso | `rest-timer.tsx` | Sheet com anel de 236px e marcas, timer 56px, "A seguir", −15s / PULAR / +15s. Minimizado vira pílula no topo. |
 | 06 Novo PR | `pr-overlay.tsx` | Overlay âmbar com raios, burst e ganho em kg. |
-| 07 Resumo | `app/(focus)/treino/resumo` | Hexágono com a letra, raios girando, grade de stats 2×2, lista de PRs, pontos com contagem e streak subindo. |
+| 07 Resumo | `app/(focus)/treino/resumo` | Hexágono com a letra, raios girando, grade de stats 2×2, lista de PRs, pontos com contagem e streak subindo. **Card "Conquista nova"** (entre os PRs e os pontos, só se houver): card com borda `lime/30` e gradiente lime como o de pontos, label mono 9,5px lime "CONQUISTA NOVA" ("CONQUISTAS NOVAS" se várias), e uma linha por conquista com o selo `md`, nome Chakra 17px/600, descrição 12px `fg/60` e chevron. Entra com `screen-in` (delay 0,7s). 1,8s depois o sheet da medalha abre sozinho com a entrada girando; com várias, o eyebrow diz "CONQUISTA NOVA · 1 DE 2" e o botão "PRÓXIMA" (pílula lime como o HOJE da Dieta) passa para a seguinte. Tocar numa linha abre de novo. |
 | 08 Dieta | `app/(tabs)/dieta` | Card do dia (kcal 42px + barra segmentada + 3 barras de macro), cards de refeição com itens, meta por refeição, navegação de dias. |
 | 09 Adicionar alimento | `food-sheet.tsx` | Sheet de 84% com busca, chips de recentes, lista, quantidade com roleta e chips 50/100/150/200/300, "1.582 → 1.820 kcal no dia". |
-| 11 Perfil | `app/(tabs)/perfil` | Avatar com anel de XP de 80px, 3 stats (peso com −/+), objetivo segmentado, metas com steppers, conquistas em hexágonos 3×3 com sheet de detalhe. |
+| 11 Perfil | `app/(tabs)/perfil` | Avatar com anel de XP de 80px, 3 stats (peso com −/+), objetivo segmentado, metas com steppers, conquistas em hexágonos 3×3 com sheet de detalhe (medalha 3D). Conquista nova (desbloqueada fora do treino) abre sozinha girando, 0,45s depois da tela. |
 | Onboarding | `app/(focus)/onboarding` | Progresso de 6 segmentos no topo, cards de escolha com check redondo, metas com explicação. |
 | 10 Progresso | `app/(tabs)/progresso` | Construída a partir da seção 6, com os extras pedidos depois: resumo do mês (4 blocos), período 1A, linha tracejada de tendência, "Registrar peso" (sheet com roleta), seletor "kg máx. / 1RM est." e "+" com todos os exercícios, volume por grupo muscular (4 semanas, barras horizontais). Seletores compactos de cabeçalho usam `PillToggle`. |
 | Importar treino | `app/(focus)/treinos/importar` | Textarea grande, card de leitura com varredura e mensagens, revisão com badges NOVO (âmbar) e CONFIRMAR (lime). |

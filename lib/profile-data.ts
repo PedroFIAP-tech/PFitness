@@ -1,4 +1,5 @@
 import "server-only";
+import { syncAchievements, type Achievement } from "@/lib/achievements";
 import { getCurrentProfile, getSessionUser } from "@/lib/auth";
 import { shiftDay, todayInAppTimeZone } from "@/lib/date";
 import { DEFAULT_MEAL_PLAN, parseMealPlan, type MealPlanEntry, type Nutrients } from "@/lib/diet-model";
@@ -17,18 +18,6 @@ import { levelFromXp, XP_PER_LEVEL } from "@/lib/xp";
 
 /** "Ignorar" esconde a sugestão de meta por esta quantidade de dias. */
 const SUGGESTION_SNOOZE_DAYS = 7;
-
-export type Achievement = {
-  id: string;
-  name: string;
-  description: string;
-  badgeCode: string;
-  badgeUnit: string;
-  progress: number;
-  target: number;
-  /** ISO; null se ainda bloqueada */
-  unlockedAt: string | null;
-};
 
 /** Dados do corpo usados no cálculo; null nos campos que o usuário ainda não preencheu. */
 export type BodyProfile = {
@@ -60,7 +49,7 @@ export async function getProfilePageData(): Promise<ProfilePageData> {
   const [supabase, user] = await Promise.all([createClient(), getSessionUser()]);
   const today = todayInAppTimeZone();
 
-  const [profile, weightsResult, goalsResult, xpResult, progressResult, catalogResult] = await Promise.all([
+  const [profile, weightsResult, goalsResult, xpResult, achievements] = await Promise.all([
     getCurrentProfile(),
     supabase
       .from("weight_logs")
@@ -77,10 +66,9 @@ export async function getProfilePageData(): Promise<ProfilePageData> {
       .limit(1)
       .maybeSingle(),
     supabase.from("v_user_xp").select("xp").eq("user_id", user.id).maybeSingle(),
-    supabase.rpc("sync_achievements"),
-    supabase.from("achievements").select("id, name, description, badge_code, badge_unit"),
+    syncAchievements(),
   ]);
-  for (const result of [weightsResult, goalsResult, xpResult, progressResult, catalogResult]) {
+  for (const result of [weightsResult, goalsResult, xpResult]) {
     if (result.error) throw result.error;
   }
 
@@ -105,32 +93,6 @@ export async function getProfilePageData(): Promise<ProfilePageData> {
         currentKcal: goals.kcal,
         today,
       });
-
-  const progress = new Map((progressResult.data ?? []).map((row) => [row.achievement_id, row]));
-  const achievements = (catalogResult.data ?? [])
-    .map((row): Achievement => {
-      const state = progress.get(row.id);
-      return {
-        id: row.id,
-        name: row.name,
-        description: row.description,
-        badgeCode: row.badge_code,
-        badgeUnit: row.badge_unit,
-        progress: Number(state?.progress ?? 0),
-        target: Number(state?.target ?? 0),
-        unlockedAt: state?.unlocked_at ?? null,
-      };
-    })
-    // Desbloqueadas primeiro (mais recentes antes), depois as mais perto de sair
-    .sort((a, b) =>
-      a.unlockedAt && b.unlockedAt
-        ? b.unlockedAt.localeCompare(a.unlockedAt)
-        : a.unlockedAt
-          ? -1
-          : b.unlockedAt
-            ? 1
-            : b.progress / (b.target || 1) - a.progress / (a.target || 1),
-    );
 
   const xp = Number(xpResult.data?.xp ?? 0);
   const level = levelFromXp(xp);

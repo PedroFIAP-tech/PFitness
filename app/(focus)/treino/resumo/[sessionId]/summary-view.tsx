@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { markAchievementsSeen } from "@/app/(tabs)/perfil/actions";
+import { AchievementHexagon } from "@/components/achievements/achievement-hexagon";
+import { AchievementSheet } from "@/components/achievements/achievement-sheet";
 import { buttonStyles } from "@/components/ui/button";
+import { ChevronRightIcon } from "@/components/ui/icons";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/cn";
 import { formatDuration, formatKg, formatNumber, plural } from "@/lib/format";
@@ -10,6 +14,8 @@ import { useTween } from "@/lib/use-tween";
 import type { WorkoutSummary } from "@/lib/workout-session";
 
 const HEXAGON = "polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)";
+/** A conquista nova abre depois das animações do resumo (stats, PRs e pontos). */
+const NEW_ACHIEVEMENT_DELAY_MS = 1800;
 
 /** Resumo do treino concluído (tela 07). */
 export function SummaryView({ summary, streakBefore }: { summary: WorkoutSummary; streakBefore: number }) {
@@ -17,6 +23,18 @@ export function SummaryView({ summary, streakBefore }: { summary: WorkoutSummary
   const streakProgress = useTween(700, 1100);
   const streak = Math.round(streakBefore + (summary.streak - streakBefore) * streakProgress);
   const streakUp = summary.streak > streakBefore && streakProgress >= 1;
+  // Guardadas na entrada: depois de marcadas como vistas, o servidor já não as manda
+  const [newAchievements] = useState(summary.newAchievements);
+  const [openAchievement, setOpenAchievement] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (newAchievements.length === 0) return;
+    const timeout = setTimeout(() => {
+      setOpenAchievement(0);
+      void markAchievementsSeen(newAchievements.map((achievement) => achievement.id));
+    }, NEW_ACHIEVEMENT_DELAY_MS);
+    return () => clearTimeout(timeout);
+  }, [newAchievements]);
 
   return (
     <div className="relative min-h-dvh overflow-hidden">
@@ -84,6 +102,34 @@ export function SummaryView({ summary, streakBefore }: { summary: WorkoutSummary
           </ul>
         )}
 
+        {newAchievements.length > 0 && (
+          <section className="flex w-full animate-[screen-in_0.5s_0.7s_both] flex-col gap-2.5 rounded-card border border-lime/30 bg-[linear-gradient(160deg,oklch(0.9_0.2_128/0.1),rgb(255_255_255/0.02)_60%)] p-4">
+            <span className="font-mono text-[9.5px] leading-none font-medium tracking-[0.16em] text-lime">
+              {newAchievements.length > 1 ? "CONQUISTAS NOVAS" : "CONQUISTA NOVA"}
+            </span>
+            <ul className="flex flex-col gap-1">
+              {newAchievements.map((achievement, index) => (
+                <li key={achievement.id}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenAchievement(index)}
+                    className="flex w-full items-center gap-3.5 py-1 text-left transition-transform duration-150 active:scale-[.98]"
+                  >
+                    <AchievementHexagon achievement={achievement} />
+                    <span className="flex min-w-0 flex-1 flex-col gap-1">
+                      <span className="truncate font-display text-[17px] leading-tight font-semibold">
+                        {achievement.name}
+                      </span>
+                      <span className="line-clamp-2 text-xs leading-snug text-fg/60">{achievement.description}</span>
+                    </span>
+                    <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-fg/40" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <section className="flex w-full flex-col gap-3 rounded-card border border-lime/30 bg-[linear-gradient(160deg,oklch(0.9_0.2_128/0.1),rgb(255_255_255/0.02)_60%)] p-4">
           <div className="flex items-end justify-between">
             <div className="flex flex-col gap-2">
@@ -128,6 +174,16 @@ export function SummaryView({ summary, streakBefore }: { summary: WorkoutSummary
           Voltar ao início
         </Link>
       </main>
+
+      {openAchievement !== null && (
+        <AchievementSheet
+          key={openAchievement}
+          queue={newAchievements}
+          start={openAchievement}
+          celebrate
+          onClose={() => setOpenAchievement(null)}
+        />
+      )}
     </div>
   );
 }

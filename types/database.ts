@@ -422,16 +422,19 @@ export type Database = {
       user_achievements: {
         Row: {
           achievement_id: string
+          seen_at: string | null
           unlocked_at: string
           user_id: string
         }
         Insert: {
           achievement_id: string
+          seen_at?: string | null
           unlocked_at?: string
           user_id: string
         }
         Update: {
           achievement_id?: string
+          seen_at?: string | null
           unlocked_at?: string
           user_id?: string
         }
@@ -725,7 +728,13 @@ export type Database = {
       }
       sync_achievements: {
         Args: never
-        Returns: { achievement_id: string; progress: number; target: number; unlocked_at: string | null }[]
+        Returns: {
+          achievement_id: string
+          progress: number
+          seen_at: string | null
+          target: number
+          unlocked_at: string | null
+        }[]
       }
       training_calendar: {
         Args: { p_from: string }

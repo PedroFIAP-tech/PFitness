@@ -83,3 +83,23 @@ export async function dismissGoalSuggestion(): Promise<Result> {
   }
   revalidatePath("/perfil");
 }
+
+/** A medalha da conquista nova já girou: deixa de ser nova (resumo do treino e Perfil). */
+export async function markAchievementsSeen(ids: string[]): Promise<Result> {
+  const user = await getSessionUser();
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 50 || !ids.every((id) => typeof id === "string")) {
+    return { error: "Conquistas inválidas." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("user_achievements")
+    .update({ seen_at: new Date().toISOString() })
+    .eq("user_id", user.id)
+    .in("achievement_id", ids)
+    .is("seen_at", null);
+  if (error) {
+    console.error("markAchievementsSeen", error);
+    return { error: "Não foi possível salvar as conquistas." };
+  }
+  revalidatePath("/perfil");
+}

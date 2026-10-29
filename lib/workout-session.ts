@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { syncAchievements, type Achievement } from "@/lib/achievements";
 import { getSessionUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { LoggedSet, WorkoutExercise, WorkoutSessionData } from "@/lib/workout-model";
@@ -171,6 +172,8 @@ export type WorkoutSummary = {
   prs: { exerciseName: string; weightKg: number; reps: number; gainKg: number }[];
   points: { sets: number; setPoints: number; prs: number; prPoints: number; finishPoints: number; total: number };
   streak: number;
+  /** Desbloqueadas e ainda não vistas (a medalha gira no resumo) */
+  newAchievements: Achievement[];
 };
 
 /** Resumo de um treino concluído do usuário; null se não existir ou não estiver concluído. */
@@ -190,7 +193,7 @@ export async function getWorkoutSummary(sessionId: number): Promise<WorkoutSumma
   if (!session?.finished_at) return null;
 
   const setIds = session.session_sets.map((set) => set.id);
-  const [bestsResult, setPointsResult, finishPointsResult, streakResult] = await Promise.all([
+  const [bestsResult, setPointsResult, finishPointsResult, streakResult, achievements] = await Promise.all([
     supabase.rpc("exercise_bests_before", { p_session_id: sessionId }),
     setIds.length
       ? supabase
@@ -207,6 +210,7 @@ export async function getWorkoutSummary(sessionId: number): Promise<WorkoutSumma
       .eq("kind", "treino_concluido")
       .eq("ref_id", sessionId),
     supabase.rpc("current_streak", { p_user: user.id }),
+    syncAchievements(),
   ]);
   if (bestsResult.error) throw bestsResult.error;
   if (setPointsResult.error) throw setPointsResult.error;
@@ -271,5 +275,6 @@ export async function getWorkoutSummary(sessionId: number): Promise<WorkoutSumma
       total: setPoints + prPoints + finishPoints,
     },
     streak: streakResult.data,
+    newAchievements: achievements.filter((achievement) => achievement.isNew),
   };
 }

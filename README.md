@@ -47,6 +47,7 @@ O schema base está em [`docs/pfitness_schema.sql`](docs/pfitness_schema.sql). A
 | `20261028160000_workout_import.sql` | Importar treino por texto: `plan_exercises.notes`, `workout_plans.weekday`, letras únicas só entre fichas ativas, `save_workout_plan` com dia e observação, `import_workout_plans` (exercícios novos + fichas numa transação), `ai_usage` + `claim_ai_usage` (limite diário da IA) |
 | `20261029120000_profile_onboarding.sql` | Perfil e onboarding: `lanche_manha` em `meal_type`, colunas de rotina/treinos/refeições/restrições em `profiles`, `daily_goals.source`, `save_onboarding`, `log_weight`, `set_daily_goals` e `sync_achievements` (progresso e desbloqueio das conquistas) |
 | `20261029140000_progress.sql` | Aba Progresso (só leitura): `load_progress` (carga máxima e 1RM estimado por exercício e semana), `training_calendar` (volume, treinos, duração e alimentação por dia) e `muscle_volume` (volume por grupo muscular) |
+| `20261029160000_achievement_seen.sql` | Conquista nova: `user_achievements.seen_at` (as já desbloqueadas contam como vistas) e `sync_achievements` devolvendo `seen_at`; o resumo do treino e o Perfil mostram a medalha girando e marcam como vista |
 
 ## Scripts
 
@@ -67,6 +68,10 @@ Para regenerar os tipos depois de mudar o schema, faça login no CLI do Supabase
 npx supabase login
 SUPABASE_PROJECT_REF=<ref> npm run db:types
 ```
+
+### Conta de testes
+
+Os testes de navegador e de fluxo usam **sempre** a conta `RM560393+pfitness-qa@fiap.com.br`. Email e senha ficam em `.env.test.local` na raiz (ignorado pelo git, como todo `.env*`), nas chaves `TEST_EMAIL` e `TEST_PASSWORD`; os roteiros leem desse arquivo. Se ele sumir, crie a conta de novo e grave as chaves (com "Confirm email" desligado, o cadastro já entra). Quem escreve um teste apaga só o que o próprio teste criou. A conta `pfitness-teste2` é a conta pessoal de uso real e não entra em testes.
 
 ## Deploy na Vercel
 
