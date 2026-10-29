@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import type { Database } from "@/types/database";
 import { supabaseAnonKey, supabaseUrl } from "./env";
 
@@ -11,6 +12,10 @@ import { supabaseAnonKey, supabaseUrl } from "./env";
  */
 export async function createClient() {
   const cookieStore = await cookies();
+  // O supabase-js lê a sessão (e confere a expiração com Date.now()) antes de
+  // cada consulta. Com partialPrefetching, os cookies já resolvem no prerender
+  // de runtime, onde Date.now() não é aceito: connection() espera a requisição.
+  await connection();
 
   return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {

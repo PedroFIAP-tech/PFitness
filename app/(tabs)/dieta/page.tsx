@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { Screen, ScreenHeaderSkeleton } from "@/components/app-shell/screen";
 import { parseDay, todayInAppTimeZone } from "@/lib/date";
@@ -19,6 +20,8 @@ export default function DietaPage({ searchParams }: PageProps<"/dieta">) {
 
 async function DietContent({ searchParams }: Pick<PageProps<"/dieta">, "searchParams">) {
   const params = await searchParams;
+  // "Hoje" depende do relógio: só no render da requisição (searchParams já resolve antes)
+  await connection();
   const today = todayInAppTimeZone();
   // ?dia=YYYY-MM-DD abre um dia passado; sem ele (ou com data futura/inválida), hoje
   const requested = parseDay(params.dia);
